@@ -1,0 +1,94 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { courses } from '@/data/courses';
+
+export function getStaticPaths() {
+  return courses.map((course) => ({
+    params: { courseId: course.id },
+    props: { course },
+  }));
+}
+
+const { course } = Astro.props;
+---
+<BaseLayout title={`${course.title} - AprendePlus`}>
+  <div class="min-h-screen bg-white">
+    <section class="bg-[#2B2B2B] text-white py-12">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2">
+            <div class="text-[#F5D98A] text-sm font-medium mb-3">{course.category}</div>
+            <h1 class="text-4xl font-bold mb-4">{course.title}</h1>
+            <p class="text-gray-300 text-lg leading-relaxed">{course.description}</p>
+          </div>
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl p-6 text-[#2B2B2B] sticky top-24">
+              <div class="aspect-video bg-[#EEEEEE] rounded-lg mb-6 overflow-hidden">
+                <img src={course.image} alt={course.title} class="w-full h-full object-cover" />
+              </div>
+              <a
+                href={`/curso/${course.id}/clase/${course.lessons[0].id}`}
+                class="w-full bg-[#2F7FBF] text-white py-4 rounded-lg hover:bg-[#256A9E] transition-colors flex items-center justify-center gap-2 mb-3"
+              >
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                Comenzar curso
+              </a>
+              <p class="text-center text-sm text-gray-600">
+                {course.lessons.length} lecciones • {course.duration}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-12">
+      <div class="max-w-4xl mx-auto px-6">
+        <div class="mb-12">
+          <h2 class="text-2xl font-bold text-[#2B2B2B] mb-6">Lo que aprenderás</h2>
+          <div class="bg-[#FFF0CE] rounded-xl p-8">
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {course.whatYouLearn.map((item, index) => (
+                <li class="flex items-start gap-3">
+                  <div class="w-6 h-6 bg-[#2F7FBF] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <span class="text-[#2B2B2B]">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div class="mb-12">
+          <h2 class="text-2xl font-bold text-[#2B2B2B] mb-6">Temario del curso</h2>
+          <p class="text-gray-600 mb-6">{course.lessons.length} lecciones</p>
+          <div class="space-y-3">
+            {course.lessons.map((lesson, index) => (
+              <details class="border border-gray-200 rounded-lg overflow-hidden group">
+                <summary class="px-6 py-4 hover:bg-[#FFF0CE] transition-colors cursor-pointer list-none flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-4 text-left">
+                    <div class="w-8 h-8 bg-[#EEEEEE] rounded-full flex items-center justify-center text-sm font-semibold text-[#2B2B2B] flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <p class="font-medium text-[#2B2B2B]">{lesson.title}</p>
+                  </div>
+                  <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    {lesson.duration}
+                  </div>
+                </summary>
+                <div class="px-6 py-4 bg-[#EEEEEE]/30">
+                  <p class="text-gray-600">
+                    En esta lección explorarás los conceptos fundamentales y realizarás ejercicios prácticos.
+                  </p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</BaseLayout>

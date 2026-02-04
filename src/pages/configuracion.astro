@@ -1,0 +1,79 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Configuración - AprendePlus" currentPath="/configuracion">
+  <div class="min-h-screen bg-white py-12">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Configuración</h1>
+          <p class="text-gray-600">Administra los ajustes generales de la plataforma</p>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-white border border-gray-200 rounded-xl p-6">
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-4">Certificados</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-[#2B2B2B]">Habilitar certificados</p>
+                <p class="text-sm text-gray-600">Los usuarios recibirán certificados al completar cursos</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="cert-enabled" checked class="sr-only peer" />
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[#2F7FBF] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
+            </div>
+            <div>
+              <label for="passing-score" class="block font-medium text-[#2B2B2B] mb-2">Puntaje mínimo para certificado (%)</label>
+              <input type="number" id="passing-score" min="0" max="100" value="70" class="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
+              <p class="text-sm text-gray-600 mt-1">Los usuarios deben obtener al menos este puntaje para recibir el certificado</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-6">
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-4">Notificaciones</h2>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-[#2B2B2B]">Notificaciones por correo</p>
+              <p class="text-sm text-gray-600">Enviar emails cuando los usuarios completen lecciones o cursos</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="email-notif" checked class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[#2F7FBF] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-6">
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-4">Sistema</h2>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-[#2B2B2B]">Modo mantenimiento</p>
+              <p class="text-sm text-gray-600">Desactivar la plataforma temporalmente para mantenimiento</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="maintenance" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[#2F7FBF] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="button" id="save-settings" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
+            Guardar cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  document.getElementById('save-settings')?.addEventListener('click', () => {
+    alert('Configuración guardada correctamente');
+  });
+</script>

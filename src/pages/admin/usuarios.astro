@@ -1,0 +1,102 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { users } from '../../data/users';
+---
+
+<Layout title="Usuarios - AprendePlus" currentPath="/admin/usuarios">
+  <div class="min-h-screen bg-white py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Gestión de Usuarios</h1>
+          <p class="text-gray-600">Administra los usuarios de la plataforma</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/cursos" class="flex items-center gap-2 bg-white border-2 border-[#2F7FBF] text-[#2F7FBF] px-6 py-3 rounded-lg hover:bg-[#2F7FBF] hover:text-white transition-colors font-medium">
+            Ver vista de usuario
+          </a>
+          <button type="button" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
+            + Agregar Usuario
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <input type="text" id="user-search" placeholder="Buscar usuarios..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-[#EEEEEE]">
+            <tr>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Usuario</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Correo</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Rol</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Cursos</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Estado</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody" class="divide-y divide-gray-200">
+            {users.map((user) => (
+              <tr class="user-row hover:bg-[#FFF0CE]/30 transition-colors" data-name={user.name.toLowerCase()} data-email={user.email.toLowerCase()}>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#2F7FBF] rounded-full flex items-center justify-center text-white font-semibold">
+                      {user.name.charAt(0)}
+                    </div>
+                    <p class="font-medium text-[#2B2B2B]">{user.name}</p>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-700">{user.email}</td>
+                <td class="px-6 py-4">
+                  <span class={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-700">{user.enrolledCourses.length} cursos</td>
+                <td class="px-6 py-4 text-center">
+                  {user.enabled ? <span class="text-green-500">● Activo</span> : <span class="text-red-500">● Inactivo</span>}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-center gap-2">
+                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Editar">✏️</button>
+                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Cambiar contraseña">🔒</button>
+                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Asignar cursos">➕</button>
+                    <button type="button" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">🗑</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <div class="bg-[#FFF0CE] rounded-xl p-6">
+          <p class="text-sm text-gray-700 mb-1">Total Usuarios</p>
+          <p class="text-3xl font-bold text-[#2B2B2B]">{users.length}</p>
+        </div>
+        <div class="bg-[#FFF0CE] rounded-xl p-6">
+          <p class="text-sm text-gray-700 mb-1">Usuarios Activos</p>
+          <p class="text-3xl font-bold text-[#2B2B2B]">{users.filter((u) => u.enabled).length}</p>
+        </div>
+        <div class="bg-[#FFF0CE] rounded-xl p-6">
+          <p class="text-sm text-gray-700 mb-1">Administradores</p>
+          <p class="text-3xl font-bold text-[#2B2B2B]">{users.filter((u) => u.role === 'admin').length}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  document.getElementById('user-search')?.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    document.querySelectorAll('.user-row').forEach((row: Element) => {
+      const el = row as HTMLElement;
+      const match = !q || (el.dataset.name ?? '').includes(q) || (el.dataset.email ?? '').includes(q);
+      el.style.display = match ? '' : 'none';
+    });
+  });
+</script>

@@ -1,0 +1,14 @@
+---
+interface Props {
+  title?: string;
+  showFooter?: boolean;
+  currentPath?: string;
+}
+
+const { title = 'AprendePlus', showFooter = true } = Astro.props;
+import BaseLayout from './BaseLayout.astro';
+---
+
+<BaseLayout title={title} showFooter={showFooter}>
+  <slot />
+</BaseLayout>

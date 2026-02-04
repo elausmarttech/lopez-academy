@@ -1,0 +1,78 @@
+---
+interface Props {
+  currentPath?: string;
+}
+const { currentPath = '' } = Astro.props;
+const isActive = (path: string) => currentPath === path;
+const logoHref = currentPath.startsWith('/admin') || currentPath === '/configuracion' ? '/admin' : '/cursos';
+---
+<header class="bg-[#123859] border-b border-white/10 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-6 py-2.5">
+    <div class="flex items-center justify-between">
+      <a href={logoHref} class="flex items-center hover:opacity-90 transition-opacity">
+        <img
+          src="/logo.png"
+          alt="López A Insura & Tax - Aprendiendo"
+          class="h-11 w-auto max-w-[260px] object-contain"
+        />
+      </a>
+
+      <nav class="flex items-center gap-8">
+        {currentPath === '/configuracion' ? (
+          <a href="/admin" class="text-base transition-colors text-white hover:text-white/90 font-medium flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            Volver a la lista de cursos
+          </a>
+        ) : currentPath.startsWith('/admin') ? (
+          <>
+            <a href="/cursos" class="text-base transition-colors text-white hover:text-white/90">
+              Ver vista de usuario
+            </a>
+            <a
+              href="/admin/usuarios"
+              class:list={[
+                'text-base transition-colors',
+                currentPath.startsWith('/admin/usuarios') ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
+              ]}
+            >
+              Usuarios
+            </a>
+            <a
+              href="/configuracion"
+              class:list={[
+                'text-base transition-colors',
+                currentPath === '/configuracion' ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
+              ]}
+            >
+              Configuraciones
+            </a>
+          </>
+        ) : (
+          <>
+            <a href="/admin" class="text-base transition-colors text-white hover:text-white/90">
+              Panel admin
+            </a>
+            <a
+              href="/cursos"
+              class:list={[
+                'text-base transition-colors',
+                isActive('/cursos') ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
+              ]}
+            >
+              Mis Cursos
+            </a>
+          </>
+        )}
+        <div class="flex items-center gap-4 ml-4 pl-6 border-l border-white/20">
+          <div class="flex items-center gap-2.5 text-white text-base">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <span>Mi Perfil</span>
+          </div>
+          <a href="/" class="flex items-center gap-2 text-white hover:opacity-90 transition-opacity p-1 rounded" title="Cerrar sesión">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,57 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import { courses } from '@/data/courses';
+
+export function getStaticPaths() {
+  return courses.map((course) => ({
+    params: { courseId: course.id },
+    props: { course },
+  }));
+}
+
+const { course } = Astro.props;
+---
+<Layout title={`Lecciones de ${course.title} - AprendePlus`}>
+  <div class="min-h-screen bg-white py-12">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="mb-8">
+        <a href={`/admin/curso/${course.id}/editar`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Volver a editar curso
+        </a>
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Lecciones: {course.title}</h1>
+        <p class="text-gray-600">Edita las lecciones del curso. Arrastra para cambiar el orden.</p>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-[#FFF0CE]/30">
+          <p class="text-sm font-medium text-[#2B2B2B]">{course.lessons.length} lecciones</p>
+          <a href={`/admin/curso/${course.id}/leccion/nueva`} class="flex items-center gap-2 px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] transition-colors text-sm font-medium">
+            + Agregar lección
+          </a>
+        </div>
+
+        <div id="lessons-list" class="divide-y divide-gray-200">
+          {course.lessons.map((lesson, index) => (
+            <a href={`/admin/curso/${course.id}/leccion/${lesson.id}/editar`} class="lesson-item flex items-center gap-4 p-4 hover:bg-[#FFF0CE]/20 transition-colors group block">
+              <div class="w-10 h-10 bg-[#EEEEEE] rounded-full flex items-center justify-center text-sm font-semibold text-[#2B2B2B] flex-shrink-0">
+                {index + 1}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-[#2B2B2B] group-hover:text-[#2F7FBF]">{lesson.title}</p>
+                <p class="text-sm text-gray-500">{lesson.duration}</p>
+              </div>
+              <span class="text-[#2F7FBF] text-sm font-medium group-hover:underline">Editar contenido →</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-6">
+        <a href={`/admin/curso/${course.id}/editar`} class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] transition-colors font-medium">
+          Volver al curso
+        </a>
+      </div>
+    </div>
+  </div>
+</Layout>
