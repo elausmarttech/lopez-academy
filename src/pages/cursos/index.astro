@@ -1,135 +1,132 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { courses, categories, levels } from '@/data/courses';
 ---
-<BaseLayout title="Catálogo de cursos - AprendePlus">
+<BaseLayout title="Course catalog - AprendePlus">
   <div class="min-h-screen bg-white">
     <section class="bg-[#FFF0CE] py-12">
       <div class="max-w-7xl mx-auto px-6">
-        <h1 class="text-4xl font-bold text-[#2B2B2B] mb-4">Catálogo de cursos</h1>
-        <p class="text-gray-600 text-lg">Explora nuestra colección completa de cursos online</p>
+        <h1 class="text-4xl font-bold text-[#2B2B2B] mb-4">Course catalog</h1>
+        <p class="text-gray-600 text-lg">Explore our full collection of online courses</p>
       </div>
     </section>
 
     <section class="border-b border-gray-200 bg-white sticky top-[73px] z-40">
       <div class="max-w-7xl mx-auto px-6 py-6">
-        <form id="filters" class="flex flex-col lg:flex-row gap-4">
+        <div class="flex flex-col lg:flex-row gap-4">
           <div class="flex-1">
             <div class="relative">
               <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               <input
                 type="text"
                 id="search"
-                name="search"
-                placeholder="Buscar cursos..."
+                placeholder="Search courses..."
                 class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"
               />
             </div>
           </div>
-          <div>
-            <select
-              name="category"
-              id="category"
-              class="w-full lg:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white"
-            >
-              {categories.map((cat) => (
-                <option value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <select
-              name="level"
-              id="level"
-              class="w-full lg:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white"
-            >
-              {levels.map((lvl) => (
-                <option value={lvl}>{lvl}</option>
-              ))}
-            </select>
-          </div>
-        </form>
+        </div>
       </div>
     </section>
 
     <section class="py-12">
       <div class="max-w-7xl mx-auto px-6">
-        <p id="count" class="mb-6 text-gray-600">{courses.length} cursos encontrados</p>
+        <p id="count" class="mb-6 text-gray-600">Loading courses...</p>
         <div id="grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {courses.map((course) => (
-            <a
-              href={`/curso/${course.id}`}
-              class="group course-card"
-              data-category={course.category}
-              data-level={course.level}
-              data-title={course.title.toLowerCase()}
-              data-description={course.description.toLowerCase()}
-            >
-              <div class="bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                <div class="relative h-48 overflow-hidden bg-[#EEEEEE]">
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div class="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-medium text-[#2B2B2B]">
-                    {course.level}
-                  </div>
-                </div>
-                <div class="p-5 flex-1 flex flex-col">
-                  <div class="text-xs text-[#2F7FBF] font-medium mb-2">{course.category}</div>
-                  <h3 class="font-semibold text-[#2B2B2B] mb-2 group-hover:text-[#2F7FBF] transition-colors line-clamp-2">
-                    {course.title}
-                  </h3>
-                  <p class="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">{course.shortDescription}</p>
-                  <div class="flex items-center gap-1 text-sm text-gray-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>{course.duration}</span>
-                  </div>
-                </div>
-              </div>
-            </a>
-          ))}
+          <!-- Filled by client -->
         </div>
+        <div id="loading" class="text-center py-12 text-gray-500">Loading...</div>
         <div id="empty" class="hidden text-center py-20">
           <div class="w-20 h-20 bg-[#EEEEEE] rounded-full flex items-center justify-center mx-auto mb-4">
             <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </div>
-          <h3 class="text-xl font-semibold text-[#2B2B2B] mb-2">No se encontraron cursos</h3>
-          <p class="text-gray-600">Intenta ajustar tus filtros o búsqueda</p>
+          <h3 class="text-xl font-semibold text-[#2B2B2B] mb-2">No courses found</h3>
+          <p class="text-gray-600">Try adjusting your search</p>
         </div>
+        <div id="error" class="hidden text-center py-12 text-red-600"></div>
       </div>
     </section>
   </div>
 
   <script>
+    import { get } from '@/lib/api';
+    import type { CourseListItem } from '@/lib/api-types';
+
     const grid = document.getElementById('grid');
     const countEl = document.getElementById('count');
+    const loadingEl = document.getElementById('loading');
     const emptyEl = document.getElementById('empty');
+    const errorEl = document.getElementById('error');
     const search = document.getElementById('search') as HTMLInputElement;
-    const category = document.getElementById('category') as HTMLSelectElement;
-    const level = document.getElementById('level') as HTMLSelectElement;
-    const cards = Array.from(document.querySelectorAll<HTMLElement>('.course-card'));
 
-    function filter() {
+    function renderCards(courses: CourseListItem[]) {
+      if (!grid) return;
+      grid.innerHTML = courses
+        .map(
+          (c) => `
+        <a href="/curso/${c.id}" class="group course-card block" data-title="${(c.title || '').toLowerCase()}" data-description="${(c.description || '').toLowerCase()}">
+          <div class="bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
+            <div class="relative h-48 overflow-hidden bg-[#EEEEEE] flex items-center justify-center">
+              <span class="text-4xl text-gray-400">📚</span>
+            </div>
+            <div class="p-5 flex-1 flex flex-col">
+              <h3 class="font-semibold text-[#2B2B2B] mb-2 group-hover:text-[#2F7FBF] transition-colors line-clamp-2">${escapeHtml(c.title)}</h3>
+              <p class="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">${escapeHtml(c.description || '')}</p>
+              ${c.progress && c.progress.total > 0 ? `<p class="text-sm text-[#2F7FBF]">Progress: ${c.progress.completed}/${c.progress.total}</p>` : ''}
+            </div>
+          </div>
+        </a>
+      `
+        )
+        .join('');
+      updateFilter();
+    }
+
+    function escapeHtml(s: string): string {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function updateFilter() {
       const q = (search?.value ?? '').toLowerCase();
-      const cat = category?.value ?? 'Todos';
-      const lvl = level?.value ?? 'Todos';
+      const cards = Array.from(document.querySelectorAll<HTMLElement>('.course-card'));
       let visible = 0;
       cards.forEach((card) => {
-        const matchCat = cat === 'Todos' || card.dataset.category === cat;
-        const matchLevel = lvl === 'Todos' || card.dataset.level === lvl;
-        const matchSearch = !q || (card.dataset.title?.includes(q) || card.dataset.description?.includes(q));
-        const show = matchCat && matchLevel && matchSearch;
-        card.style.display = show ? '' : 'none';
-        if (show) visible++;
+        const match = !q || (card.dataset.title?.includes(q) || card.dataset.description?.includes(q));
+        card.style.display = match ? '' : 'none';
+        if (match) visible++;
       });
-      if (countEl) countEl.textContent = `${visible} ${visible === 1 ? 'curso encontrado' : 'cursos encontrados'}`;
-      if (emptyEl) emptyEl.classList.toggle('hidden', visible > 0);
-      if (grid) grid.classList.toggle('hidden', visible === 0);
+      if (countEl) countEl.textContent = `${visible} ${visible === 1 ? 'course found' : 'courses found'}`;
+      if (emptyEl) emptyEl.classList.toggle('hidden', visible > 0 || cards.length === 0);
+      if (grid) grid.classList.toggle('hidden', cards.length === 0);
     }
-    search?.addEventListener('input', filter);
-    category?.addEventListener('change', filter);
-    level?.addEventListener('change', filter);
+
+    search?.addEventListener('input', updateFilter);
+
+    async function load() {
+      if (loadingEl) loadingEl.classList.remove('hidden');
+      if (errorEl) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+      }
+      try {
+        const data = (await get<CourseListItem[]>('/courses')) ?? [];
+        renderCards(data);
+        if (countEl) countEl.textContent = `${data.length} ${data.length === 1 ? 'course found' : 'courses found'}`;
+        if (data.length === 0 && emptyEl) emptyEl.classList.remove('hidden');
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading courses';
+        if (errorEl) {
+          errorEl.textContent = msg;
+          errorEl.classList.remove('hidden');
+        }
+        renderCards([]);
+      } finally {
+        if (loadingEl) loadingEl.classList.add('hidden');
+      }
+    }
+
+    load();
   </script>
 </BaseLayout>

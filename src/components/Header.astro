@@ -12,7 +12,7 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
       <a href={logoHref} class="flex items-center hover:opacity-90 transition-opacity">
         <img
           src="/logo.png"
-          alt="López A Insura & Tax - Aprendiendo"
+          alt="López A Insura & Tax - Learning"
           class="h-11 w-auto max-w-[260px] object-contain"
         />
       </a>
@@ -21,12 +21,12 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
         {currentPath === '/configuracion' ? (
           <a href="/admin" class="text-base transition-colors text-white hover:text-white/90 font-medium flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            Volver a la lista de cursos
+            Back to course list
           </a>
         ) : currentPath.startsWith('/admin') ? (
           <>
             <a href="/cursos" class="text-base transition-colors text-white hover:text-white/90">
-              Ver vista de usuario
+              View as user
             </a>
             <a
               href="/admin/usuarios"
@@ -35,7 +35,7 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
                 currentPath.startsWith('/admin/usuarios') ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
               ]}
             >
-              Usuarios
+              Users
             </a>
             <a
               href="/configuracion"
@@ -44,13 +44,13 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
                 currentPath === '/configuracion' ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
               ]}
             >
-              Configuraciones
+              Settings
             </a>
           </>
         ) : (
           <>
-            <a href="/admin" class="text-base transition-colors text-white hover:text-white/90">
-              Panel admin
+            <a href="/admin" id="admin-link" class="text-base transition-colors text-white hover:text-white/90 hidden">
+              Admin panel
             </a>
             <a
               href="/cursos"
@@ -59,20 +59,33 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
                 isActive('/cursos') ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
               ]}
             >
-              Mis Cursos
+              My Courses
             </a>
           </>
         )}
         <div class="flex items-center gap-4 ml-4 pl-6 border-l border-white/20">
           <div class="flex items-center gap-2.5 text-white text-base">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            <span>Mi Perfil</span>
+            <span>My Profile</span>
           </div>
-          <a href="/" class="flex items-center gap-2 text-white hover:opacity-90 transition-opacity p-1 rounded" title="Cerrar sesión">
+          <a href="/signout" class="flex items-center gap-2 text-white hover:opacity-90 transition-opacity p-1 rounded" title="Sign out">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </a>
         </div>
       </nav>
     </div>
   </div>
+  <script>
+    import { request } from '@/lib/api';
+    (async function () {
+      const adminLink = document.getElementById('admin-link');
+      if (!adminLink) return;
+      try {
+        await request('/admin/courses', { skipForbiddenRedirect: true });
+        adminLink.classList.remove('hidden');
+      } catch {
+        adminLink.classList.add('hidden');
+      }
+    })();
+  </script>
 </header>

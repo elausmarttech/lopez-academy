@@ -1,78 +1,34 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { categories, levels } from '@/data/courses';
 
-const formCategories = categories.filter((c) => c !== 'Todos');
-const formLevels = levels.filter((l) => l !== 'Todos');
+export const prerender = false;
 ---
-<Layout title="Crear curso - AprendePlus">
+<Layout title="Create course - AprendePlus" currentPath="/admin">
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-3xl mx-auto px-6">
       <div class="mb-8">
         <a href="/admin" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver a la lista de cursos
+          Back to course list
         </a>
-        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Crear nuevo curso</h1>
-        <p class="text-gray-600">Completa la información para agregar un nuevo curso a la plataforma</p>
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Create new course</h1>
+        <p class="text-gray-600">Fill in the information to add a new course</p>
       </div>
 
-      <form class="space-y-6 bg-white border border-gray-200 rounded-xl p-6">
+      <div id="form-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
+
+      <form id="course-form" class="space-y-6 bg-white border border-gray-200 rounded-xl p-6">
         <div>
-          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Título del curso *</label>
-          <input type="text" id="title" name="title" required placeholder="Ej: Desarrollo Web Full Stack" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Course title *</label>
+          <input type="text" id="title" name="title" required placeholder="e.g. Full Stack Web Development" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
         </div>
-
         <div>
-          <label for="shortDescription" class="block text-sm font-medium text-[#2B2B2B] mb-2">Descripción breve *</label>
-          <input type="text" id="shortDescription" name="shortDescription" required placeholder="Resumen en una o dos líneas" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+          <label for="description" class="block text-sm font-medium text-[#2B2B2B] mb-2">Description *</label>
+          <textarea id="description" name="description" rows="4" required placeholder="Course description..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"></textarea>
         </div>
-
-        <div>
-          <label for="description" class="block text-sm font-medium text-[#2B2B2B] mb-2">Descripción completa *</label>
-          <textarea id="description" name="description" rows="4" required placeholder="Descripción detallada del curso..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"></textarea>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="instructor" class="block text-sm font-medium text-[#2B2B2B] mb-2">Instructor *</label>
-            <input type="text" id="instructor" name="instructor" required placeholder="Nombre del instructor" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-          </div>
-          <div>
-            <label for="duration" class="block text-sm font-medium text-[#2B2B2B] mb-2">Duración *</label>
-            <input type="text" id="duration" name="duration" required placeholder="Ej: 12 semanas" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="category" class="block text-sm font-medium text-[#2B2B2B] mb-2">Categoría *</label>
-            <select id="category" name="category" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white">
-              {formCategories.map((cat) => (
-                <option value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label for="level" class="block text-sm font-medium text-[#2B2B2B] mb-2">Nivel *</label>
-            <select id="level" name="level" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white">
-              {formLevels.map((lvl) => (
-                <option value={lvl}>{lvl}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label for="image" class="block text-sm font-medium text-[#2B2B2B] mb-2">URL de la imagen *</label>
-          <input type="url" id="image" name="image" required placeholder="https://..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-        </div>
-
         <div class="flex justify-end gap-3 pt-4">
-          <a href="/admin" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancelar</a>
-          <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] transition-colors font-medium">
-            Crear curso
-          </button>
+          <a href="/admin" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</a>
+          <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] transition-colors font-medium">Create course</button>
         </div>
       </form>
     </div>
@@ -80,9 +36,29 @@ const formLevels = levels.filter((l) => l !== 'Todos');
 </Layout>
 
 <script>
-  document.querySelector('form')?.addEventListener('submit', (e) => {
+  import { post } from '@/lib/api';
+  import type { AdminCourse } from '@/lib/api-types';
+
+  const form = document.getElementById('course-form') as HTMLFormElement;
+  const errorEl = document.getElementById('form-error');
+
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    alert('Curso creado correctamente. (Frontend: los datos no se guardan sin backend)');
-    window.location.href = '/admin';
+    if (errorEl) { errorEl.classList.add('hidden'); errorEl.textContent = ''; }
+    const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
+    const description = (form.querySelector('#description') as HTMLTextAreaElement)?.value?.trim();
+    if (!title || !description) return;
+    try {
+      const course = await post<AdminCourse>('/admin/courses', { course: { title, description } });
+      window.location.href = `/admin/curso/${course.id}/editar`;
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; body?: { error?: string; errors?: string[] } };
+      if (apiErr.status === 403) {
+        window.location.href = '/admin/forbidden';
+        return;
+      }
+      const msg = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error creating course';
+      if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); }
+    }
   });
 </script>

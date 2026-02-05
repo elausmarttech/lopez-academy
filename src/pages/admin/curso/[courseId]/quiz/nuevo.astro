@@ -1,0 +1,224 @@
+---
+import Layout from '@/layouts/Layout.astro';
+
+export const prerender = false;
+const { courseId } = Astro.params;
+---
+<Layout title="New quiz - AprendePlus" currentPath="/admin">
+  <div id="admin-quiz-nuevo-root" class="min-h-screen bg-white py-12" data-course-id={courseId ?? ''}>
+    <div class="max-w-xl mx-auto px-6">
+      <div class="mb-8">
+        <a href={`/admin/curso/${courseId}/editar`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to course
+        </a>
+        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">New quiz</h1>
+      </div>
+
+      <div id="form-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
+
+      <form id="quiz-form" class="space-y-6">
+        <div class="bg-white border border-gray-200 rounded-xl p-6">
+          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Quiz title *</label>
+          <input type="text" id="title" name="title" required placeholder="e.g. Review quiz" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
+        </div>
+
+        <div id="questions-container" class="space-y-6"></div>
+
+        <div class="flex flex-col gap-4">
+          <button type="button" id="add-question-btn" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-[#2F7FBF] hover:text-[#2F7FBF] font-medium cursor-pointer">+ Add Question</button>
+          <div class="flex justify-end gap-3">
+            <a href={`/admin/curso/${courseId}/editar`} class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 cursor-pointer">Cancel</a>
+            <button type="submit" id="save-quiz-btn" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] font-medium cursor-pointer">Save</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <template id="question-block-tpl">
+    <div class="question-block bg-white border border-gray-200 rounded-xl p-6" data-index="">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm font-medium text-gray-500 question-number">Question 1</span>
+        <button type="button" class="question-remove text-red-600 hover:text-red-800 text-sm cursor-pointer">Remove</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-[#2B2B2B] mb-2">Question text *</label>
+          <textarea class="question-body w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" rows="3" placeholder="Enter the question..."></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#2B2B2B] mb-2">Type</label>
+          <select class="question-type w-full px-4 py-3 border border-gray-300 rounded-lg">
+            <option value="multiple_choice">Multiple choice</option>
+            <option value="true_false">True / False</option>
+          </select>
+        </div>
+        <div class="question-options-multiple space-y-2">
+          <label class="block text-sm font-medium text-[#2B2B2B]">Options</label>
+          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="a" /><input type="text" class="question-option-a flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="A" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="b" /><input type="text" class="question-option-b flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="B" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="c" /><input type="text" class="question-option-c flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="C" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="d" /><input type="text" class="question-option-d flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="D" /></div>
+        </div>
+        <div class="question-options-tf hidden">
+          <label class="block text-sm font-medium text-[#2B2B2B]">Correct answer</label>
+          <div class="flex gap-4 mt-2">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" class="question-correct-tf" name="" value="true" /> True</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" class="question-correct-tf" name="" value="false" /> False</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</Layout>
+
+<script>
+  import { get, post } from '@/lib/api';
+  import type { AdminQuiz, AdminCourseWithItems } from '@/lib/api-types';
+
+  const root = document.getElementById('admin-quiz-nuevo-root');
+  const courseId = root?.getAttribute('data-course-id') ?? '';
+
+  const form = document.getElementById('quiz-form') as HTMLFormElement;
+  const errorEl = document.getElementById('form-error');
+  const questionsContainer = document.getElementById('questions-container');
+  const addQuestionBtn = document.getElementById('add-question-btn');
+  const questionTpl = document.getElementById('question-block-tpl') as HTMLTemplateElement;
+
+  let questionIndex = 0;
+
+  function addQuestionBlock() {
+    if (!questionTpl || !questionsContainer) return;
+    const block = questionTpl.content.cloneNode(true) as DocumentFragment;
+    const wrap = block.querySelector('.question-block') as HTMLElement;
+    if (!wrap) return;
+
+    const idx = questionIndex++;
+    wrap.setAttribute('data-index', String(idx));
+
+    const nameMc = `q${idx}_correct`;
+    const nameTf = `q${idx}_correct_tf`;
+    wrap.querySelectorAll('.question-correct-mc').forEach((el) => (el as HTMLInputElement).name = nameMc);
+    wrap.querySelectorAll('.question-correct-tf').forEach((el) => (el as HTMLInputElement).name = nameTf);
+
+    const typeSelect = wrap.querySelector('.question-type') as HTMLSelectElement;
+    const optionsMultiple = wrap.querySelector('.question-options-multiple') as HTMLElement;
+    const optionsTf = wrap.querySelector('.question-options-tf') as HTMLElement;
+
+    function toggleOptions() {
+      const isTf = typeSelect?.value === 'true_false';
+      optionsMultiple?.classList.toggle('hidden', isTf);
+      optionsTf?.classList.toggle('hidden', !isTf);
+    }
+    typeSelect?.addEventListener('change', toggleOptions);
+    toggleOptions();
+
+    const removeBtn = wrap.querySelector('.question-remove');
+    removeBtn?.addEventListener('click', () => {
+      const count = questionsContainer?.querySelectorAll('.question-block').length ?? 0;
+      if (count <= 1) return;
+      wrap.remove();
+      renumberQuestions();
+      updateRemoveButtons();
+    });
+
+    questionsContainer.appendChild(block);
+    renumberQuestions();
+    updateRemoveButtons();
+  }
+
+  function renumberQuestions() {
+    questionsContainer?.querySelectorAll('.question-block').forEach((block, i) => {
+      const num = block.querySelector('.question-number');
+      if (num) num.textContent = `Question ${i + 1}`;
+    });
+  }
+
+  function updateRemoveButtons() {
+    const blocks = questionsContainer?.querySelectorAll('.question-block') ?? [];
+    const showRemove = blocks.length > 1;
+    blocks.forEach((block) => {
+      const removeBtn = block.querySelector('.question-remove') as HTMLElement | null;
+      if (removeBtn) {
+        removeBtn.classList.toggle('hidden', !showRemove);
+        removeBtn.style.pointerEvents = showRemove ? '' : 'none';
+      }
+    });
+  }
+
+  function collectQuestions(): Array<{ body: string; question_type: string; correct_answer: string; option_a?: string; option_b?: string; option_c?: string; option_d?: string }> {
+    const list = questionsContainer?.querySelectorAll('.question-block') ?? [];
+    const out: Array<Record<string, unknown>> = [];
+    list.forEach((block) => {
+      const body = (block.querySelector('.question-body') as HTMLTextAreaElement)?.value?.trim() ?? '';
+      const question_type = (block.querySelector('.question-type') as HTMLSelectElement)?.value ?? 'multiple_choice';
+      if (!body) return;
+
+      let correct_answer: string;
+      if (question_type === 'true_false') {
+        const radio = block.querySelector('.question-correct-tf:checked') as HTMLInputElement | null;
+        correct_answer = radio?.value === 'false' ? 'false' : 'true';
+      } else {
+        const radio = block.querySelector('.question-correct-mc:checked') as HTMLInputElement | null;
+        correct_answer = (radio?.value ?? 'a').toLowerCase();
+        if (!['a', 'b', 'c', 'd'].includes(correct_answer)) correct_answer = 'a';
+      }
+
+      const q: Record<string, unknown> = { body, question_type, correct_answer };
+      if (question_type === 'multiple_choice') {
+        q.option_a = (block.querySelector('.question-option-a') as HTMLInputElement)?.value?.trim() ?? '';
+        q.option_b = (block.querySelector('.question-option-b') as HTMLInputElement)?.value?.trim() ?? '';
+        q.option_c = (block.querySelector('.question-option-c') as HTMLInputElement)?.value?.trim() ?? '';
+        q.option_d = (block.querySelector('.question-option-d') as HTMLInputElement)?.value?.trim() ?? '';
+      }
+      out.push(q);
+    });
+    return out as Array<{ body: string; question_type: string; correct_answer: string; option_a?: string; option_b?: string; option_c?: string; option_d?: string }>;
+  }
+
+  addQuestionBtn?.addEventListener('click', () => addQuestionBlock());
+  addQuestionBlock();
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errorEl) errorEl.classList.add('hidden');
+    const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
+    if (!title) {
+      if (errorEl) { errorEl.textContent = 'Enter a quiz title.'; errorEl.classList.remove('hidden'); }
+      return;
+    }
+    const questions = collectQuestions();
+    if (questions.length === 0) {
+      if (errorEl) { errorEl.textContent = 'Add at least one question.'; errorEl.classList.remove('hidden'); }
+      return;
+    }
+    try {
+      const quiz = await post<AdminQuiz>(`/admin/courses/${courseId}/quizzes`, { quiz: { title } });
+
+      const raw = await get<AdminCourseWithItems | { course: AdminCourseWithItems }>(`/admin/courses/${courseId}`);
+      const course = (raw as { course?: AdminCourseWithItems }).course ?? (raw as AdminCourseWithItems);
+      const courseItems = course?.course_items ?? [];
+      const maxPosition = courseItems.length > 0
+        ? Math.max(...courseItems.map(item => item.position ?? 0))
+        : -1;
+      const newPosition = maxPosition + 1;
+
+      await post(`/admin/courses/${courseId}/course_items`, {
+        course_item: { item_type: 'Quiz', item_id: quiz.id, position: newPosition },
+      });
+
+      for (const question of questions) {
+        await post(`/admin/courses/${courseId}/quizzes/${quiz.id}/questions`, { question });
+      }
+
+      window.location.href = `/admin/curso/${courseId}/editar`;
+    } catch (err: unknown) {
+      const apiErr = err as { body?: { error?: string; errors?: string[] } };
+      if (errorEl) {
+        errorEl.textContent = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error creating quiz';
+        errorEl.classList.remove('hidden');
+      }
+    }
+  });
+</script>

@@ -1,0 +1,340 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+export const prerender = false;
+const { courseId, itemId } = Astro.params;
+---
+<BaseLayout title="Curso - AprendePlus" showFooter={false}>
+  <div id="curso-item-detail-root" class="min-h-screen bg-[#F8F7F4] flex flex-col" data-course-id={courseId ?? ''} data-item-id={itemId ?? ''}>
+    <div class="flex-1 p-6 lg:p-8">
+      <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-6">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to course
+      </a>
+      <div id="item-content" class="max-w-4xl mx-auto">
+        <p class="text-gray-500">Loading...</p>
+      </div>
+      <div id="item-error" class="hidden max-w-4xl mx-auto mt-6 text-red-600"></div>
+    </div>
+  </div>
+
+  <script>
+    import { get, post } from '@/lib/api';
+    import type {
+      CourseDetail,
+      CurrentItemPayload,
+      CompleteLessonResponse,
+      QuizDetail,
+      QuizSubmitResponse,
+    } from '@/lib/api-types';
+
+    const root = document.getElementById('curso-item-detail-root');
+    const courseId = root?.getAttribute('data-course-id') ?? '';
+    const itemIdStr = root?.getAttribute('data-item-id') ?? '';
+    const itemId = itemIdStr ? parseInt(itemIdStr, 10) : null;
+
+    function escapeHtml(s: string): string {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function showError(msg: string) {
+      const content = document.getElementById('item-content');
+      const errEl = document.getElementById('item-error');
+      if (content) content.innerHTML = '';
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function loadItem(): Promise<void> {
+      const content = document.getElementById('item-content');
+      const errorEl = document.getElementById('item-error');
+      if (errorEl) errorEl.classList.add('hidden');
+
+      if (!courseId || !itemId) {
+        showError('Invalid parameters');
+        return;
+      }
+
+      try {
+        // Get course detail to find the item and check completion status
+        const course = await get<CourseDetail>(`/courses/${courseId}`);
+        const courseItem = course.course_items?.find((item) => item.id === itemId);
+        
+        if (!courseItem) {
+          showError('Item not found');
+          return;
+        }
+
+        const isCompleted = courseItem.completed;
+        const currentIndex = course.course_items?.findIndex((item) => item.id === itemId) ?? -1;
+        const prevItem = currentIndex > 0 ? course.course_items?.[currentIndex - 1] : null;
+        const nextItem = currentIndex >= 0 && course.course_items ? course.course_items[currentIndex + 1] : null;
+
+        if (courseItem.item_type === 'Lesson') {
+          // Try to fetch lesson content
+          // First check if this is the current item
+          let lesson: { id: number; title: string; content: string };
+          let hasContent = false;
+          
+          try {
+            const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
+            if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id) {
+              lesson = currentItemData.item;
+              hasContent = true;
+            } else {
+              // Not the current item, try to fetch lesson directly
+              try {
+                const lessonData = await get<{ id: number; title: string; content: string }>(`/lessons/${courseItem.item_id}`);
+                lesson = lessonData;
+                hasContent = true;
+              } catch {
+                // Fallback: use title from courseItem
+                lesson = {
+                  id: courseItem.item_id,
+                  title: courseItem.title,
+                  content: '',
+                };
+              }
+            }
+          } catch {
+            // Fallback: use title from courseItem
+            lesson = {
+              id: courseItem.item_id,
+              title: courseItem.title,
+              content: '',
+            };
+          }
+
+          if (content) {
+            const prevIsLesson = prevItem?.item_type === 'Lesson';
+            const nextIsLesson = nextItem?.item_type === 'Lesson';
+            
+            const navButtons = `
+              <div class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
+                ${prevItem ? `
+                  <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    ${prevIsLesson ? 'Previous Lesson' : 'Previous'}
+                  </a>
+                ` : '<div></div>'}
+                ${isCompleted ? `
+                  <span class="flex items-center gap-2 text-green-600 font-medium">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    Completed
+                  </span>
+                ` : `
+                  <button type="button" id="complete-lesson-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">
+                    Mark as complete
+                  </button>
+                `}
+                ${nextItem ? `
+                  <a href="/curso/${courseId}/item/${nextItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors">
+                    ${nextIsLesson ? 'Next Lesson' : 'Next'}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  </a>
+                ` : '<div></div>'}
+              </div>
+            `;
+
+            const contentHtml = hasContent && lesson.content 
+              ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
+              : isCompleted 
+                ? `<p class="text-gray-600 italic">This lesson has been completed. You can review the content above.</p>`
+                : '';
+
+            content.innerHTML = `
+              <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
+                <div class="p-6 lg:p-8">
+                  <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">${escapeHtml(lesson.title)}</h2>
+                  ${contentHtml}
+                  ${navButtons}
+                </div>
+              </div>
+            `;
+
+            if (!isCompleted) {
+              document.getElementById('complete-lesson-btn')?.addEventListener('click', async () => {
+                const btn = document.getElementById('complete-lesson-btn') as HTMLButtonElement;
+                if (btn) {
+                  btn.disabled = true;
+                  btn.textContent = 'Saving...';
+                }
+                try {
+                  const res = await post<CompleteLessonResponse>(`/courses/${courseId}/complete_lesson`, {
+                    course_item_id: itemId,
+                  });
+                  // Reload to show completed state
+                  loadItem();
+                } catch (e: unknown) {
+                  const err = e as { body?: { error?: string; errors?: string[] } };
+                  const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error';
+                  showError(msg);
+                  if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Marcar como completada';
+                  }
+                }
+              });
+            }
+          }
+          return;
+        }
+
+        if (courseItem.item_type === 'Quiz') {
+          const quizId = courseItem.item_id;
+          const quiz = await get<QuizDetail>(`/quizzes/${quizId}`);
+          renderQuiz(quiz, itemId, content, isCompleted, prevItem, nextItem, courseId);
+          return;
+        }
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading';
+        showError(msg);
+      }
+    }
+
+    function renderQuiz(
+      quiz: QuizDetail,
+      courseItemId: number,
+      contentEl: HTMLElement | null,
+      isCompleted: boolean,
+      prevItem: { id: number; title: string; item_type: string } | null,
+      nextItem: { id: number; title: string; item_type: string } | null,
+      courseId: string
+    ) {
+      if (!contentEl) return;
+      
+      const questionsHtml = quiz.questions
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map(
+          (q) => {
+            const opts =
+              q.question_type === 'true_false'
+                ? Object.entries(q.options || {})
+                    .map(([k, v]) => `<label class="flex items-center gap-2"><input type="radio" name="q_${q.id}" value="${escapeHtml(k)}" /> ${escapeHtml(v)}</label>`)
+                    .join('')
+                : Object.entries(q.options || {})
+                    .map(([k, v]) => `<label class="flex items-center gap-2"><input type="radio" name="q_${q.id}" value="${escapeHtml(k)}" /> ${escapeHtml(v)}</label>`)
+                    .join('');
+            return `
+              <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <p class="font-medium text-[#2B2B2B] mb-3">${escapeHtml(q.body)}</p>
+                <div class="flex flex-col gap-2">${opts}</div>
+              </div>
+            `;
+          }
+        )
+        .join('');
+
+      const navButtons = `
+        <div class="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
+          ${prevItem ? `
+            <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              Elemento anterior
+            </a>
+          ` : '<div></div>'}
+          ${nextItem ? `
+            <a href="/curso/${courseId}/item/${nextItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
+              Siguiente elemento
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+          ` : '<div></div>'}
+        </div>
+      `;
+
+      if (isCompleted) {
+        contentEl.innerHTML = `
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-[#2B2B2B]">${escapeHtml(quiz.title)}</h2>
+                <span class="flex items-center gap-2 text-green-600 font-medium">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  Completado
+                </span>
+              </div>
+            </div>
+            <div class="p-6">
+              <p class="text-gray-600 mb-6">This quiz has already been completed. You can review the questions.</p>
+              ${questionsHtml}
+              ${navButtons}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      contentEl.innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-[#2B2B2B]">${escapeHtml(quiz.title)}</h2>
+          </div>
+          <form id="quiz-form" class="p-6">
+            ${questionsHtml}
+            <div class="flex items-center justify-between gap-4">
+              ${prevItem ? `
+                <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                  Elemento anterior
+                </a>
+              ` : '<div></div>'}
+              <button type="submit" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">Submit answers</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('quiz-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const answers: Record<string, string> = {};
+        quiz.questions.forEach((q) => {
+          const input = form.querySelector(`input[name="q_${q.id}"]:checked`) as HTMLInputElement;
+          if (input) answers[String(q.id)] = input.value;
+        });
+        const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Submitting...';
+        }
+        try {
+          const res = await post<QuizSubmitResponse>(`/quizzes/${quiz.id}/submit`, { answers });
+          if (contentEl) {
+            const nextNav = res.next_item ? `<a href="/curso/${courseId}/item/${res.next_item.id}" class="text-[#2F7FBF] hover:underline">Continue</a>` : '';
+            contentEl.innerHTML = `
+              <div class="bg-white rounded-xl p-8">
+                <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">Result: ${res.score}%</h2>
+                <p class="text-gray-600 mb-4">${escapeHtml(res.message)}</p>
+                ${res.passed ? '<p class="text-green-600 font-medium mb-6">Passed!</p>' : '<p class="text-amber-600 font-medium mb-6">You can try again.</p>'}
+                ${res.course_complete ? `<a href="/curso/${courseId}" class="text-[#2F7FBF] hover:underline">Back to course</a>` : nextNav || '<button type="button" id="quiz-continue" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Continue</button>'}
+              </div>
+            `;
+            if (res.course_complete) {
+              const backLink = contentEl.querySelector('a[href*="/curso/"]');
+              if (backLink && !res.next_item) (backLink as HTMLElement).innerHTML = 'Course completed – Back to course';
+            } else if (res.next_item) {
+              // Navigation handled by link
+            } else {
+              document.getElementById('quiz-continue')?.addEventListener('click', () => loadItem());
+            }
+          }
+        } catch (err: unknown) {
+          const apiErr = err as { body?: { error?: string; errors?: string[] } };
+          const msg = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error submitting';
+          showError(msg);
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Submit answers';
+          }
+        }
+      });
+    }
+
+    if (courseId && itemId) loadItem();
+  </script>
+</BaseLayout>

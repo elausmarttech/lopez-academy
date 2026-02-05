@@ -1,0 +1,111 @@
+---
+import Layout from '@/layouts/Layout.astro';
+export const prerender = false;
+const { courseId, quizId } = Astro.params;
+---
+<Layout title="New question - AprendePlus" currentPath="/admin">
+  <div id="pregunta-nueva-root" class="min-h-screen bg-white py-12" data-course-id={courseId ?? ''} data-quiz-id={quizId ?? ''}>
+    <div class="max-w-xl mx-auto px-6">
+      <div class="mb-8">
+        <a href={`/admin/curso/${courseId}/quiz/${quizId}/editar`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to quiz
+        </a>
+        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">New question</h1>
+      </div>
+      <div id="form-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
+      <form id="question-form" class="space-y-6 bg-white border border-gray-200 rounded-xl p-6">
+        <div>
+          <label for="body" class="block text-sm font-medium text-[#2B2B2B] mb-2">Question text *</label>
+          <textarea id="body" name="body" rows="3" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]"></textarea>
+        </div>
+        <div>
+          <label for="question_type" class="block text-sm font-medium text-[#2B2B2B] mb-2">Type</label>
+          <select id="question_type" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+            <option value="multiple_choice">Multiple choice</option>
+            <option value="true_false">True / False</option>
+          </select>
+        </div>
+        <div id="options-multiple" class="space-y-2">
+          <label class="block text-sm font-medium text-[#2B2B2B]">Options</label>
+          <div class="flex gap-2 items-center"><input type="radio" name="correct" value="a" /><input type="text" id="option_a" placeholder="A" class="flex-1 px-3 py-2 border rounded-lg" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" name="correct" value="b" /><input type="text" id="option_b" placeholder="B" class="flex-1 px-3 py-2 border rounded-lg" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" name="correct" value="c" /><input type="text" id="option_c" placeholder="C" class="flex-1 px-3 py-2 border rounded-lg" /></div>
+          <div class="flex gap-2 items-center"><input type="radio" name="correct" value="d" /><input type="text" id="option_d" placeholder="D" class="flex-1 px-3 py-2 border rounded-lg" /></div>
+        </div>
+        <div id="options-tf" class="hidden">
+          <label class="block text-sm font-medium text-[#2B2B2B]">Correct answer</label>
+          <div class="flex gap-4 mt-2">
+            <label class="flex items-center gap-2"><input type="radio" name="correct_tf" value="true" /> True</label>
+            <label class="flex items-center gap-2"><input type="radio" name="correct_tf" value="false" /> False</label>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3">
+          <a href={`/admin/curso/${courseId}/quiz/${quizId}/editar`} class="px-6 py-3 border border-gray-300 rounded-lg">Cancel</a>
+          <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg font-medium">Create question</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Layout>
+<script>
+  import { post } from '@/lib/api';
+  const root = document.getElementById('pregunta-nueva-root');
+  const courseId = root?.getAttribute('data-course-id') ?? '';
+  const quizId = root?.getAttribute('data-quiz-id') ?? '';
+  const form = document.getElementById('question-form');
+  const questionType = document.getElementById('question_type');
+  const optionsMultiple = document.getElementById('options-multiple');
+  const optionsTf = document.getElementById('options-tf');
+  const errorEl = document.getElementById('form-error');
+  questionType?.addEventListener('change', () => {
+    const isTf = questionType.value === 'true_false';
+    optionsMultiple?.classList.toggle('hidden', isTf);
+    optionsTf?.classList.toggle('hidden', !isTf);
+  });
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errorEl) errorEl.classList.add('hidden');
+    const body = (document.getElementById('body') as HTMLTextAreaElement)?.value?.trim();
+    const question_type = (questionType?.value ?? 'multiple_choice') as string;
+    if (!body) {
+      if (errorEl) { errorEl.textContent = 'Enter the question text.'; errorEl.classList.remove('hidden'); }
+      return;
+    }
+    const correctTf = form?.querySelector('input[name="correct_tf"]:checked') as HTMLInputElement | null;
+    const correctMc = form?.querySelector('input[name="correct"]:checked') as HTMLInputElement | null;
+    let correct_answer: string;
+    if (question_type === 'true_false') {
+      if (!correctTf?.value) {
+        if (errorEl) { errorEl.textContent = 'Select the correct answer (True or False).'; errorEl.classList.remove('hidden'); }
+        return;
+      }
+      correct_answer = String(correctTf.value).toLowerCase();
+      if (correct_answer !== 'true' && correct_answer !== 'false') correct_answer = 'true';
+    } else {
+      if (!correctMc?.value) {
+        if (errorEl) { errorEl.textContent = 'Mark the correct option (A, B, C or D).'; errorEl.classList.remove('hidden'); }
+        return;
+      }
+      correct_answer = String(correctMc.value).toLowerCase();
+      if (!['a', 'b', 'c', 'd'].includes(correct_answer)) correct_answer = 'a';
+    }
+    const question: Record<string, unknown> = { body, question_type, correct_answer };
+    if (question_type === 'multiple_choice') {
+      question.option_a = (document.getElementById('option_a') as HTMLInputElement)?.value?.trim() ?? '';
+      question.option_b = (document.getElementById('option_b') as HTMLInputElement)?.value?.trim() ?? '';
+      question.option_c = (document.getElementById('option_c') as HTMLInputElement)?.value?.trim();
+      question.option_d = (document.getElementById('option_d') as HTMLInputElement)?.value?.trim();
+    }
+    try {
+      await post(`/admin/courses/${courseId}/quizzes/${quizId}/questions`, { question });
+      window.location.href = `/admin/curso/${courseId}/quiz/${quizId}/editar`;
+    } catch (err: unknown) {
+      const apiErr = err as { body?: { error?: string; errors?: string[] } };
+      if (errorEl) {
+        errorEl.textContent = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error creating question.';
+        errorEl.classList.remove('hidden');
+      }
+    }
+  });
+</script>

@@ -2,12 +2,12 @@
 import '../styles/index.css';
 ---
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width" />
-    <title>Iniciar sesión - AprendePlus</title>
+    <title>Sign in - AprendePlus</title>
   </head>
   <body>
     <div class="min-h-screen bg-gradient-to-br from-[#123859] to-white flex items-center justify-center px-6 py-12">
@@ -16,16 +16,17 @@ import '../styles/index.css';
           <a href="https://lopezinsurance.com/" class="inline-block focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:ring-offset-2 rounded-xl">
             <img
               src="/logo.png"
-              alt="López A Insura & Tax - Aprendiendo"
+              alt="López A Insura & Tax - Learning"
               class="mx-auto w-full max-w-[620px] h-auto rounded-xl object-contain drop-shadow-sm"
             />
           </a>
         </div>
 
         <div class="bg-white rounded-2xl shadow-xl p-8">
-          <form action="/admin" method="get" class="space-y-6">
+          <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+          <form id="login-form" class="space-y-6">
             <div>
-              <label for="email" class="block text-sm font-medium text-[#2B2B2B] mb-2">Correo electrónico</label>
+              <label for="email" class="block text-sm font-medium text-[#2B2B2B] mb-2">Email</label>
               <div class="relative">
                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 <input
@@ -40,7 +41,7 @@ import '../styles/index.css';
             </div>
 
             <div>
-              <label for="password" class="block text-sm font-medium text-[#2B2B2B] mb-2">Contraseña</label>
+              <label for="password" class="block text-sm font-medium text-[#2B2B2B] mb-2">Password</label>
               <div class="relative">
                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 <input
@@ -57,26 +58,79 @@ import '../styles/index.css';
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
-                <span class="text-sm text-gray-600">Recordarme</span>
+                <span class="text-sm text-gray-600">Remember me</span>
               </label>
-              <a href="#" class="text-sm text-[#2F7FBF] hover:underline">¿Olvidaste tu contraseña?</a>
+              <a href="#" class="text-sm text-[#2F7FBF] hover:underline">Forgot your password?</a>
             </div>
 
             <button
               type="submit"
               class="w-full bg-[#2F7FBF] text-white py-3 rounded-lg hover:bg-[#256A9E] transition-colors font-medium"
             >
-              Iniciar sesión
+              Sign in
             </button>
           </form>
         </div>
 
         <p class="text-center text-sm text-gray-500 mt-6">
-          Al continuar, aceptas nuestros{' '}
-          <a href="#" class="text-[#2F7FBF] hover:underline">Términos de uso</a> y{' '}
-          <a href="#" class="text-[#2F7FBF] hover:underline">Política de privacidad</a>
+          By continuing, you agree to our{' '}
+          <a href="#" class="text-[#2F7FBF] hover:underline">Terms of use</a> and{' '}
+          <a href="#" class="text-[#2F7FBF] hover:underline">Privacy policy</a>
         </p>
       </div>
     </div>
+    <script>
+      (function () {
+        const form = document.getElementById('login-form') as HTMLFormElement;
+        const errorEl = document.getElementById('login-error') as HTMLDivElement;
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = (form.querySelector('#email') as HTMLInputElement)?.value?.trim();
+          const password = (form.querySelector('#password') as HTMLInputElement)?.value;
+          if (!email || !password) return;
+
+          if (errorEl) {
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+          }
+
+          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+          const res = await fetch(`${base}/users/sign_in.json`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ user: { email, password } }),
+          });
+
+          if (res.ok) {
+            const auth = res.headers.get('Authorization');
+            const token = auth?.replace(/^Bearer\s+/i, '').trim();
+            if (token) {
+              try {
+                localStorage.setItem('lopez_academy_jwt', token);
+              } catch (_) {}
+            }
+            const baseUrl = base;
+            const check = await fetch(`${baseUrl}/admin/courses`, {
+              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            });
+            window.location.href = check.ok ? '/admin' : '/cursos';
+            return;
+          }
+
+          if (res.status === 401 && errorEl) {
+            let msg = 'Invalid credentials';
+            try {
+              const data = await res.json();
+              if (data?.error) msg = data.error;
+              else if (Array.isArray(data?.errors) && data.errors.length) msg = data.errors[0];
+            } catch (_) {}
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

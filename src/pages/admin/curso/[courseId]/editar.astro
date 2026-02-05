@@ -1,103 +1,398 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
-import { courses, categories, levels } from '@/data/courses';
 
-export function getStaticPaths() {
-  return courses.map((course) => ({
-    params: { courseId: course.id },
-    props: { course },
-  }));
-}
-
-const { course } = Astro.props;
-const formCategories = categories.filter((c) => c !== 'Todos');
-const formLevels = levels.filter((l) => l !== 'Todos');
+export const prerender = false;
+const { courseId } = Astro.params;
 ---
-<Layout title={`Editar ${course.title} - AprendePlus`}>
-  <div class="min-h-screen bg-white py-12">
+<Layout title="Edit course - AprendePlus" currentPath="/admin">
+  <div id="admin-editar-root" class="min-h-screen bg-white py-12" data-course-id={courseId ?? ''}>
     <div class="max-w-3xl mx-auto px-6">
       <div class="mb-8">
         <a href="/admin" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver a la lista de cursos
+          Back to course list
         </a>
-        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Editar curso</h1>
-        <p class="text-gray-600">Modifica la información del curso</p>
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Edit course</h1>
+        <p class="text-gray-600">Modify the course information</p>
       </div>
 
-      <form class="space-y-6 bg-white border border-gray-200 rounded-xl p-6">
+      <div id="form-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
+      <div id="form-loading" class="mb-4 text-gray-500">Loading...</div>
+
+      <form id="course-form" class="space-y-6 bg-white border border-gray-200 rounded-xl p-6 hidden">
         <div>
-          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Título del curso *</label>
-          <input type="text" id="title" name="title" required value={course.title} class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Course title *</label>
+          <input type="text" id="title" name="title" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
         </div>
-
         <div>
-          <label for="shortDescription" class="block text-sm font-medium text-[#2B2B2B] mb-2">Descripción breve *</label>
-          <input type="text" id="shortDescription" name="shortDescription" required value={course.shortDescription} class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+          <label for="description" class="block text-sm font-medium text-[#2B2B2B] mb-2">Description *</label>
+          <textarea id="description" name="description" rows="4" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"></textarea>
         </div>
-
-        <div>
-          <label for="description" class="block text-sm font-medium text-[#2B2B2B] mb-2">Descripción completa *</label>
-          <textarea id="description" name="description" rows="4" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent">{course.description}</textarea>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="instructor" class="block text-sm font-medium text-[#2B2B2B] mb-2">Instructor *</label>
-            <input type="text" id="instructor" name="instructor" required value={course.instructor} class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-          </div>
-          <div>
-            <label for="duration" class="block text-sm font-medium text-[#2B2B2B] mb-2">Duración *</label>
-            <input type="text" id="duration" name="duration" required value={course.duration} class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="category" class="block text-sm font-medium text-[#2B2B2B] mb-2">Categoría *</label>
-            <select id="category" name="category" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white">
-              {formCategories.map((cat) => (
-                <option value={cat} selected={course.category === cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label for="level" class="block text-sm font-medium text-[#2B2B2B] mb-2">Nivel *</label>
-            <select id="level" name="level" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white">
-              {formLevels.map((lvl) => (
-                <option value={lvl} selected={course.level === lvl}>{lvl}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label for="image" class="block text-sm font-medium text-[#2B2B2B] mb-2">URL de la imagen *</label>
-          <input type="url" id="image" name="image" required value={course.image} class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
-        </div>
-
-        <div class="border-t border-gray-200 pt-6">
-          <a href={`/admin/curso/${course.id}/lecciones`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline font-medium">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            Gestionar lecciones ({course.lessons.length})
-          </a>
-        </div>
-
         <div class="flex justify-end gap-3 pt-4">
-          <a href="/admin" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancelar</a>
-          <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] transition-colors font-medium">
-            Guardar cambios
-          </button>
+          <a href="/admin" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</a>
+          <button type="submit" id="save-btn" class="px-6 py-3 bg-gray-400 text-white rounded-lg cursor-not-allowed transition-colors font-medium" disabled>Save changes</button>
         </div>
       </form>
+
+      <div id="items-section" class="hidden mt-8 bg-white border border-gray-200 rounded-xl p-6">
+        <div class="mb-4">
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-1">Course content</h2>
+          <p class="text-sm text-gray-600">Add lessons and quizzes, and reorder them. Order is saved automatically.</p>
+        </div>
+        <div class="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4 bg-[#FFF0CE]/30 rounded-t-lg mb-4">
+          <p id="items-count" class="text-sm font-medium text-[#2B2B2B]">0 items</p>
+          <div class="flex gap-2">
+            <a id="link-nueva-leccion" href="#" class="flex items-center gap-2 px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] text-sm font-medium">+ Lesson</a>
+            <a id="link-nuevo-quiz" href="#" class="flex items-center gap-2 px-4 py-2 bg-[#E2BC73] text-[#2B2B2B] rounded-lg hover:bg-[#d4a85f] text-sm font-medium">+ Quiz</a>
+          </div>
+        </div>
+        <div id="items-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <div class="relative">
+          <ul id="course-items-list" class="space-y-2"></ul>
+          <div id="drop-preview" class="hidden absolute left-0 right-0 h-1.5 bg-[#2F7FBF] rounded-full pointer-events-none z-10 shadow-lg" style="top: 0;"></div>
+        </div>
+      </div>
     </div>
   </div>
 </Layout>
 
 <script>
-  document.querySelector('form')?.addEventListener('submit', (e) => {
+  import { get, patch, post, del } from '@/lib/api';
+  import type { AdminCourseWithItems, AdminCourseItem } from '@/lib/api-types';
+
+  const root = document.getElementById('admin-editar-root');
+  const courseId = root?.getAttribute('data-course-id') ?? '';
+
+  const form = document.getElementById('course-form') as HTMLFormElement;
+  const formLoading = document.getElementById('form-loading');
+  const errorEl = document.getElementById('form-error');
+  const linkNuevaLeccion = document.getElementById('link-nueva-leccion');
+  const linkNuevoQuiz = document.getElementById('link-nuevo-quiz');
+  const itemsCountEl = document.getElementById('items-count');
+  const itemsSection = document.getElementById('items-section');
+  const itemsList = document.getElementById('course-items-list');
+  const itemsError = document.getElementById('items-error');
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+  
+  let originalTitle = '';
+  let originalDescription = '';
+
+  function escapeHtml(s: string): string {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  let courseItems: AdminCourseItem[] = [];
+
+  function updateQuizButtonState() {
+    const hasLesson = courseItems.some((it) => it.item_type === 'Lesson');
+    if (linkNuevoQuiz) {
+      if (hasLesson) {
+        linkNuevoQuiz.setAttribute('href', `/admin/curso/${courseId}/quiz/nuevo`);
+        linkNuevoQuiz.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        linkNuevoQuiz.removeAttribute('title');
+      } else {
+        linkNuevoQuiz.removeAttribute('href');
+        linkNuevoQuiz.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        linkNuevoQuiz.setAttribute('title', 'Add at least one lesson first');
+      }
+    }
+  }
+
+  function showItemsError(msg: string) {
+    if (itemsError) {
+      itemsError.textContent = msg;
+      itemsError.classList.remove('hidden');
+    }
+  }
+
+  function renderItems() {
+    if (!itemsList) return;
+    if (itemsCountEl) itemsCountEl.textContent = `${courseItems.length} item${courseItems.length === 1 ? '' : 's'}`;
+    const editHref = (it: AdminCourseItem) =>
+      it.item_type === 'Lesson'
+        ? `/admin/curso/${courseId}/leccion/${it.item_id}/editar`
+        : `/admin/curso/${courseId}/quiz/${it.item_id}/editar`;
+    itemsList.innerHTML = courseItems
+      .map(
+        (it, i) => `
+      <li class="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-white cursor-move hover:bg-gray-50 transition-colors draggable-item" data-id="${it.id}" draggable="true">
+        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 12h16M4 16h16"/>
+        </svg>
+        <span class="text-gray-400 text-sm w-6">${i + 1}</span>
+        <span class="text-xs font-medium text-[#2F7FBF]">${it.item_type}</span>
+        <span class="flex-1 font-medium text-[#2B2B2B]">${escapeHtml(it.item?.title ?? '')}</span>
+        <div class="flex gap-2 items-center">
+          <a href="${editHref(it)}" class="px-2 py-1 text-[#2F7FBF] hover:bg-[#2F7FBF]/10 rounded text-sm font-medium">Edit</a>
+          <button type="button" class="move-up px-2 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="move-down px-2 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm" ${i === courseItems.length - 1 ? 'disabled' : ''}>↓</button>
+          <button type="button" class="item-delete px-2 py-1 text-red-500 hover:bg-red-50 rounded text-sm">Delete</button>
+        </div>
+      </li>
+    `
+      )
+      .join('');
+
+    // Drag and drop handlers
+    let draggedElement: HTMLElement | null = null;
+    let draggedIndex: number = -1;
+    const dropPreview = document.getElementById('drop-preview');
+
+    itemsList.querySelectorAll('.draggable-item').forEach((item, i) => {
+      const li = item as HTMLElement;
+      
+      li.addEventListener('dragstart', (e) => {
+        draggedElement = li;
+        draggedIndex = i;
+        e.dataTransfer!.effectAllowed = 'move';
+        e.dataTransfer!.setData('text/html', li.innerHTML);
+        li.style.opacity = '0.5';
+        li.style.cursor = 'grabbing';
+      });
+
+      li.addEventListener('dragend', () => {
+        if (draggedElement) {
+          draggedElement.style.opacity = '1';
+          draggedElement.style.cursor = 'move';
+        }
+        itemsList?.querySelectorAll('.draggable-item').forEach((el) => {
+          (el as HTMLElement).classList.remove('border-[#2F7FBF]', 'bg-blue-50', 'border-t-2', 'border-b-2', 'border-t-[#2F7FBF]', 'border-b-[#2F7FBF]');
+        });
+        if (dropPreview) {
+          dropPreview.classList.add('hidden');
+        }
+      });
+
+      li.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = 'move';
+        
+        if (!draggedElement || li === draggedElement) return;
+        
+        const rect = li.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const itemCenterY = rect.top + rect.height / 2;
+        
+        // Determine if we're in the top or bottom half
+        const isAbove = mouseY < itemCenterY;
+        const currentIndex = Array.from(itemsList!.children).indexOf(li);
+        
+        // Remove all preview classes from all items
+        itemsList?.querySelectorAll('.draggable-item').forEach((el) => {
+          (el as HTMLElement).classList.remove('border-[#2F7FBF]', 'bg-blue-50', 'border-t-2', 'border-b-2', 'border-t-[#2F7FBF]', 'border-b-[#2F7FBF]');
+        });
+        
+        // Show preview line
+        if (dropPreview && itemsList) {
+          const container = itemsList.parentElement;
+          if (container) {
+            const containerRect = container.getBoundingClientRect();
+            const itemRect = li.getBoundingClientRect();
+            
+            if (isAbove) {
+              dropPreview.style.top = `${itemRect.top - containerRect.top - 4}px`;
+              li.classList.add('border-t-2', 'border-t-[#2F7FBF]');
+            } else {
+              dropPreview.style.top = `${itemRect.bottom - containerRect.top + 4}px`;
+              li.classList.add('border-b-2', 'border-b-[#2F7FBF]');
+            }
+            dropPreview.classList.remove('hidden');
+          }
+        }
+      });
+
+      li.addEventListener('dragleave', (e) => {
+        // Only remove classes if we're actually leaving the item (not just moving to a child)
+        const rect = li.getBoundingClientRect();
+        const relatedTarget = e.relatedTarget as HTMLElement;
+        if (!relatedTarget || !li.contains(relatedTarget)) {
+          li.classList.remove('border-[#2F7FBF]', 'bg-blue-50', 'border-t-2', 'border-b-2', 'border-t-[#2F7FBF]', 'border-b-[#2F7FBF]');
+        }
+      });
+
+      li.addEventListener('drop', (e) => {
+        e.preventDefault();
+        li.classList.remove('border-[#2F7FBF]', 'bg-blue-50', 'border-t-2', 'border-b-2', 'border-t-[#2F7FBF]', 'border-b-[#2F7FBF]');
+        if (dropPreview) {
+          dropPreview.classList.add('hidden');
+        }
+        
+        if (draggedElement && draggedIndex !== -1) {
+          const rect = li.getBoundingClientRect();
+          const mouseY = e.clientY;
+          const itemCenterY = rect.top + rect.height / 2;
+          const isAbove = mouseY < itemCenterY;
+          
+          let dropIndex = Array.from(itemsList!.children).indexOf(li);
+          
+          // Adjust drop index based on position
+          if (isAbove) {
+            // Insert before this item
+            if (dropIndex > draggedIndex) {
+              dropIndex -= 1;
+            }
+          } else {
+            // Insert after this item
+            if (dropIndex < draggedIndex) {
+              dropIndex += 1;
+            }
+          }
+          
+          if (dropIndex !== draggedIndex) {
+            // Reorder array
+            const [movedItem] = courseItems.splice(draggedIndex, 1);
+            courseItems.splice(dropIndex, 0, movedItem);
+            // Update UI immediately
+            renderItems();
+            // Save to backend
+            reorderItems();
+          }
+        }
+      });
+    });
+
+    itemsList.querySelectorAll('.move-up').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        if (i === 0) return;
+        [courseItems[i - 1], courseItems[i]] = [courseItems[i], courseItems[i - 1]];
+        renderItems();
+        reorderItems();
+      });
+    });
+    itemsList.querySelectorAll('.move-down').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        if (i >= courseItems.length - 1) return;
+        [courseItems[i], courseItems[i + 1]] = [courseItems[i + 1], courseItems[i]];
+        renderItems();
+        reorderItems();
+      });
+    });
+    itemsList.querySelectorAll('.item-delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const li = (btn as HTMLElement).closest('li');
+        const id = li?.getAttribute('data-id');
+        if (!id || !confirm('Remove this item from the course?')) return;
+        try {
+          await del(`/admin/courses/${courseId}/course_items/${id}`);
+          courseItems = courseItems.filter((x) => x.id !== Number(id));
+          renderItems();
+          updateQuizButtonState();
+        } catch (e: unknown) {
+          const err = e as { body?: { error?: string } };
+          showItemsError(err?.body?.error || 'Error deleting');
+        }
+      });
+    });
+
+    updateQuizButtonState();
+  }
+
+  async function reorderItems() {
+    const order = courseItems.map((x) => x.id);
+    try {
+      await post(`/admin/courses/${courseId}/course_items/reorder`, { order });
+      if (itemsError) itemsError.classList.add('hidden');
+    } catch (e: unknown) {
+      const err = e as { body?: { error?: string } };
+      showItemsError(err?.body?.error || 'Error saving order');
+    }
+  }
+
+  function checkForChanges() {
+    if (!saveBtn) return;
+    const titleInput = form.querySelector('#title') as HTMLInputElement;
+    const descriptionInput = form.querySelector('#description') as HTMLTextAreaElement;
+    
+    const currentTitle = titleInput?.value?.trim() ?? '';
+    const currentDescription = descriptionInput?.value?.trim() ?? '';
+    
+    const hasChanges = currentTitle !== originalTitle || currentDescription !== originalDescription;
+    
+    if (hasChanges && currentTitle && currentDescription) {
+      saveBtn.disabled = false;
+      saveBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+      saveBtn.classList.add('bg-[#2F7FBF]', 'hover:bg-[#256A9E]', 'cursor-pointer');
+    } else {
+      saveBtn.disabled = true;
+      saveBtn.classList.remove('bg-[#2F7FBF]', 'hover:bg-[#256A9E]', 'cursor-pointer');
+      saveBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+    }
+  }
+
+  async function load() {
+    try {
+      const raw = await get<AdminCourseWithItems | { course: AdminCourseWithItems }>(`/admin/courses/${courseId}`);
+      const course = (raw as { course?: AdminCourseWithItems }).course ?? (raw as AdminCourseWithItems);
+      const title = course?.title ?? '';
+      const description = course?.description ?? '';
+      
+      originalTitle = title;
+      originalDescription = description;
+      
+      (form.querySelector('#title') as HTMLInputElement).value = title;
+      (form.querySelector('#description') as HTMLTextAreaElement).value = description;
+      
+      if (linkNuevaLeccion) linkNuevaLeccion.setAttribute('href', `/admin/curso/${courseId}/leccion/nueva`);
+      courseItems = course?.course_items ?? [];
+      courseItems.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      if (formLoading) formLoading.classList.add('hidden');
+      if (form) form.classList.remove('hidden');
+      if (itemsSection) itemsSection.classList.remove('hidden');
+      renderItems();
+      updateQuizButtonState();
+      
+      // Set up change listeners
+      const titleInput = form.querySelector('#title') as HTMLInputElement;
+      const descriptionInput = form.querySelector('#description') as HTMLTextAreaElement;
+      titleInput?.addEventListener('input', checkForChanges);
+      titleInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
+      descriptionInput?.addEventListener('input', checkForChanges);
+      descriptionInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
+      
+      // Initially disable button
+      checkForChanges();
+      
+      document.title = `Edit ${course?.title ?? 'Course'} - AprendePlus`;
+    } catch (e: unknown) {
+      const err = e as { status?: number; body?: { error?: string } };
+      if (formLoading) formLoading.classList.add('hidden');
+      if (form) form.classList.remove('hidden');
+      if (err.status === 403) {
+        window.location.href = '/admin/forbidden';
+        return;
+      }
+      const msg = err?.body && typeof err.body === 'object' && 'error' in err.body ? (err.body as { error: string }).error : null;
+      if (errorEl) {
+        errorEl.textContent = msg || 'Error loading course (timeout or network). Check that GET /admin/courses/:id exists.';
+        errorEl.classList.remove('hidden');
+      }
+    }
+  }
+
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    alert('Cambios guardados correctamente. (Frontend: los datos no se guardan sin backend)');
-    window.location.href = '/admin';
+    if (saveBtn?.disabled) return;
+    if (errorEl) errorEl.classList.add('hidden');
+    const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
+    const description = (form.querySelector('#description') as HTMLTextAreaElement)?.value?.trim();
+    if (!title || !description) return;
+    try {
+      await patch(`/admin/courses/${courseId}`, { course: { title, description } });
+      // Update original values after successful save
+      originalTitle = title;
+      originalDescription = description;
+      checkForChanges();
+      window.location.href = '/admin';
+    } catch (err: unknown) {
+      const apiErr = err as { body?: { error?: string; errors?: string[] } };
+      if (errorEl) {
+        errorEl.textContent = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error saving';
+        errorEl.classList.remove('hidden');
+      }
+    }
   });
+
+  if (courseId) load();
 </script>

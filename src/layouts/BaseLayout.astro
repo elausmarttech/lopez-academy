@@ -10,7 +10,7 @@ interface Props {
 const { title = 'AprendePlus', showFooter = true } = Astro.props;
 ---
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -27,5 +27,17 @@ const { title = 'AprendePlus', showFooter = true } = Astro.props;
       </main>
       {showFooter && <Footer />}
     </div>
+    <script define:vars={{ pathname: Astro.url.pathname }}>
+      (function () {
+        if (pathname === '/' || pathname === '/signout') return;
+        try {
+          if (!localStorage.getItem('lopez_academy_jwt')) {
+            window.location.href = '/';
+          }
+        } catch (_) {
+          window.location.href = '/';
+        }
+      })();
+    </script>
   </body>
 </html>

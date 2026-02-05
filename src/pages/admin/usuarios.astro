@@ -1,102 +1,246 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { users } from '../../data/users';
----
 
-<Layout title="Usuarios - AprendePlus" currentPath="/admin/usuarios">
+export const prerender = false;
+---
+<Layout title="Users - AprendePlus" currentPath="/admin/usuarios">
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-7xl mx-auto px-6">
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Gestión de Usuarios</h1>
-          <p class="text-gray-600">Administra los usuarios de la plataforma</p>
+          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">User Management</h1>
+          <p class="text-gray-600">Manage platform users</p>
         </div>
         <div class="flex items-center gap-3">
           <a href="/cursos" class="flex items-center gap-2 bg-white border-2 border-[#2F7FBF] text-[#2F7FBF] px-6 py-3 rounded-lg hover:bg-[#2F7FBF] hover:text-white transition-colors font-medium">
-            Ver vista de usuario
+            View as user
           </a>
-          <button type="button" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
-            + Agregar Usuario
+          <button type="button" id="btn-add-user" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
+            + Add User
           </button>
         </div>
       </div>
 
       <div class="mb-6">
-        <input type="text" id="user-search" placeholder="Buscar usuarios..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+        <input type="text" id="user-search" placeholder="Search by email..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
       </div>
+
+      <div id="user-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
 
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table class="w-full">
           <thead class="bg-[#EEEEEE]">
             <tr>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Usuario</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Correo</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Rol</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Cursos</th>
-              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Estado</th>
-              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Acciones</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Email</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Role</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Created</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Actions</th>
             </tr>
           </thead>
           <tbody id="users-tbody" class="divide-y divide-gray-200">
-            {users.map((user) => (
-              <tr class="user-row hover:bg-[#FFF0CE]/30 transition-colors" data-name={user.name.toLowerCase()} data-email={user.email.toLowerCase()}>
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-[#2F7FBF] rounded-full flex items-center justify-center text-white font-semibold">
-                      {user.name.charAt(0)}
-                    </div>
-                    <p class="font-medium text-[#2B2B2B]">{user.name}</p>
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-700">{user.email}</td>
-                <td class="px-6 py-4">
-                  <span class={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {user.role === 'admin' ? 'Administrador' : 'Usuario'}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-700">{user.enrolledCourses.length} cursos</td>
-                <td class="px-6 py-4 text-center">
-                  {user.enabled ? <span class="text-green-500">● Activo</span> : <span class="text-red-500">● Inactivo</span>}
-                </td>
-                <td class="px-6 py-4">
-                  <div class="flex items-center justify-center gap-2">
-                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Editar">✏️</button>
-                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Cambiar contraseña">🔒</button>
-                    <button type="button" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Asignar cursos">➕</button>
-                    <button type="button" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">🗑</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
         <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Total Usuarios</p>
-          <p class="text-3xl font-bold text-[#2B2B2B]">{users.length}</p>
-        </div>
-        <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Usuarios Activos</p>
-          <p class="text-3xl font-bold text-[#2B2B2B]">{users.filter((u) => u.enabled).length}</p>
-        </div>
-        <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Administradores</p>
-          <p class="text-3xl font-bold text-[#2B2B2B]">{users.filter((u) => u.role === 'admin').length}</p>
+          <p class="text-sm text-gray-700 mb-1">Total Users</p>
+          <p id="users-total" class="text-3xl font-bold text-[#2B2B2B]">0</p>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit user modal -->
+  <div id="user-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6">
+      <h3 id="user-modal-title" class="text-xl font-bold text-[#2B2B2B] mb-4">Add user</h3>
+      <form id="user-form" class="space-y-4">
+        <input type="hidden" id="user-id" />
+        <div>
+          <label for="user-email" class="block text-sm font-medium text-[#2B2B2B] mb-1">Email</label>
+          <input type="email" id="user-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
+        </div>
+        <div id="user-password-fields">
+          <div class="mb-2">
+            <label for="user-password" class="block text-sm font-medium text-[#2B2B2B] mb-1">Password</label>
+            <input type="password" id="user-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
+          </div>
+          <div>
+            <label for="user-password-confirmation" class="block text-sm font-medium text-[#2B2B2B] mb-1">Confirm password</label>
+            <input type="password" id="user-password-confirmation" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="flex-1 bg-[#2F7FBF] text-white py-2 rounded-lg hover:bg-[#256A9E]">Save</button>
+          <button type="button" id="user-modal-cancel" class="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 </Layout>
 
 <script>
-  document.getElementById('user-search')?.addEventListener('input', (e) => {
-    const q = (e.target as HTMLInputElement).value.toLowerCase();
+  import { get, post, patch, del } from '@/lib/api';
+  import type { AdminUser } from '@/lib/api-types';
+
+  const tbody = document.getElementById('users-tbody');
+  const searchEl = document.getElementById('user-search') as HTMLInputElement;
+  const totalEl = document.getElementById('users-total');
+  const errorEl = document.getElementById('user-error');
+  const modal = document.getElementById('user-modal');
+  const modalTitle = document.getElementById('user-modal-title');
+  const form = document.getElementById('user-form') as HTMLFormElement;
+  const userIdInput = document.getElementById('user-id') as HTMLInputElement;
+  const userEmailInput = document.getElementById('user-email') as HTMLInputElement;
+  const userPasswordInput = document.getElementById('user-password') as HTMLInputElement;
+  const userPasswordConfInput = document.getElementById('user-password-confirmation') as HTMLInputElement;
+  const passwordFields = document.getElementById('user-password-fields');
+
+  function showError(msg: string) {
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.classList.remove('hidden');
+    }
+  }
+
+  function escapeHtml(s: string): string {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function openModal(editUser?: AdminUser) {
+    if (modal) modal.classList.remove('hidden');
+    if (modalTitle) modalTitle.textContent = editUser ? 'Edit user' : 'Add user';
+    if (userIdInput) userIdInput.value = editUser ? String(editUser.id) : '';
+    if (userEmailInput) userEmailInput.value = editUser?.email ?? '';
+    if (userPasswordInput) userPasswordInput.value = '';
+    if (userPasswordConfInput) userPasswordConfInput.value = '';
+    if (passwordFields) (passwordFields as HTMLElement).style.display = editUser ? 'block' : 'block';
+    if (userEmailInput) userEmailInput.readOnly = !!editUser;
+  }
+
+  function closeModal() {
+    if (modal) modal.classList.add('hidden');
+  }
+
+  document.getElementById('user-modal-cancel')?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.getElementById('btn-add-user')?.addEventListener('click', () => openModal());
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = userIdInput?.value;
+    const email = userEmailInput?.value?.trim();
+    const password = userPasswordInput?.value;
+    const passwordConfirmation = userPasswordConfInput?.value;
+    if (!email) return;
+    if (!id && (!password || password !== passwordConfirmation)) {
+      showError('Passwords do not match');
+      return;
+    }
+    try {
+      if (id) {
+        const body: { user: { email?: string; password?: string; password_confirmation?: string } } = { user: {} };
+        if (password) {
+          body.user.password = password;
+          body.user.password_confirmation = passwordConfirmation || password;
+        }
+        await patch(`/admin/users/${id}`, body);
+      } else {
+        await post('/admin/users', {
+          user: { email, password, password_confirmation: passwordConfirmation },
+        });
+      }
+      closeModal();
+      load();
+    } catch (err: unknown) {
+      const apiErr = err as { body?: { error?: string; errors?: string[] } };
+      showError(apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error');
+    }
+  });
+
+  function render(users: AdminUser[]) {
+    if (!tbody) return;
+    tbody.innerHTML = users
+      .map(
+        (u) => `
+      <tr class="user-row hover:bg-[#FFF0CE]/30 transition-colors" data-email="${escapeHtml((u.email || '').toLowerCase())}">
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#2F7FBF] rounded-full flex items-center justify-center text-white font-semibold">${escapeHtml((u.email || '?').charAt(0).toUpperCase())}</div>
+            <p class="font-medium text-[#2B2B2B]">${escapeHtml(u.email)}</p>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex px-3 py-1 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role === 'admin' ? 'Admin' : 'User'}</span>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(u.created_at?.slice(0, 10) || '')}</td>
+        <td class="px-6 py-4">
+          <div class="flex justify-center gap-2">
+            <button type="button" class="user-edit p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg" data-id="${u.id}" data-email="${escapeHtml(u.email)}">✏️</button>
+            <button type="button" class="user-delete p-2 text-red-500 hover:bg-red-50 rounded-lg" data-id="${u.id}">🗑</button>
+          </div>
+        </td>
+      </tr>
+    `
+      )
+      .join('');
+
+    if (totalEl) totalEl.textContent = String(users.length);
+
+    tbody.querySelectorAll('.user-edit').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = (btn as HTMLElement).dataset.id;
+        const email = (btn as HTMLElement).dataset.email;
+        if (id && email) openModal({ id: Number(id), email, role: '', created_at: '' });
+      });
+    });
+
+    tbody.querySelectorAll('.user-delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.id;
+        if (!id || !confirm('Delete this user?')) return;
+        try {
+          await del(`/admin/users/${id}`);
+          load();
+        } catch (err: unknown) {
+          const apiErr = err as { body?: { error?: string; errors?: string[] } };
+          showError(apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Cannot delete');
+        }
+      });
+    });
+  }
+
+  async function load() {
+    if (errorEl) errorEl.classList.add('hidden');
+    try {
+      const data = (await get<AdminUser[]>('/admin/users')) ?? [];
+      render(data);
+    } catch (e: unknown) {
+      const err = e as { status?: number; body?: { error?: string } };
+      if (err.status === 403) {
+        window.location.href = '/admin/forbidden';
+        return;
+      }
+      showError(err?.body?.error || 'Error loading users');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading</td></tr>';
+    }
+  }
+
+  searchEl?.addEventListener('input', () => {
+    const q = (searchEl.value ?? '').toLowerCase();
     document.querySelectorAll('.user-row').forEach((row: Element) => {
       const el = row as HTMLElement;
-      const match = !q || (el.dataset.name ?? '').includes(q) || (el.dataset.email ?? '').includes(q);
+      const match = !q || (el.dataset.email ?? '').includes(q);
       el.style.display = match ? '' : 'none';
     });
   });
+
+  load();
 </script>

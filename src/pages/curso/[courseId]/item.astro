@@ -1,0 +1,214 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+export const prerender = false;
+const { courseId } = Astro.params;
+---
+<BaseLayout title="Curso - AprendePlus" showFooter={false}>
+  <div id="curso-item-root" class="min-h-screen bg-[#F8F7F4] flex flex-col" data-course-id={courseId ?? ''}>
+    <div class="flex-1 p-6 lg:p-8">
+      <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-6">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to course
+      </a>
+      <div id="item-content" class="max-w-4xl mx-auto">
+        <p class="text-gray-500">Loading...</p>
+      </div>
+      <div id="item-error" class="hidden max-w-4xl mx-auto mt-6 text-red-600"></div>
+    </div>
+  </div>
+
+  <script>
+    import { get, post } from '@/lib/api';
+    import type {
+      CurrentItemPayload,
+      CurrentItemComplete,
+      QuizDetail,
+      QuizSubmitResponse,
+      CompleteLessonResponse,
+    } from '@/lib/api-types';
+
+    const root = document.getElementById('curso-item-root');
+    const courseId = root?.getAttribute('data-course-id') ?? '';
+
+    function escapeHtml(s: string): string {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function showError(msg: string) {
+      const content = document.getElementById('item-content');
+      const errEl = document.getElementById('item-error');
+      if (content) content.innerHTML = '';
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function loadCurrentItem(): Promise<void> {
+      const content = document.getElementById('item-content');
+      const errorEl = document.getElementById('item-error');
+      if (errorEl) errorEl.classList.add('hidden');
+
+      try {
+        const data = await get<CurrentItemPayload | CurrentItemComplete>(`/courses/${courseId}/current_item`);
+
+        if ('course_complete' in data && data.course_complete) {
+          if (content) {
+            content.innerHTML = `
+              <div class="bg-white rounded-xl p-8 text-center">
+                <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">Course completed!</h2>
+                <p class="text-gray-600 mb-6">${escapeHtml((data as CurrentItemComplete).message || 'You have completed this course.')}</p>
+                <a href="/curso/${courseId}" class="inline-flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Back to course</a>
+              </div>
+            `;
+          }
+          return;
+        }
+
+        const item = data as CurrentItemPayload;
+
+        if (item.item_type === 'Lesson') {
+          const lesson = item.item as { id: number; title: string; content: string };
+          if (content) {
+            content.innerHTML = `
+              <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
+                <div class="p-6 lg:p-8">
+                  <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">${escapeHtml(lesson.title)}</h2>
+                  <div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content || '')}</div>
+                  <div class="mt-8 pt-6 border-t border-gray-200">
+                    <button type="button" id="complete-lesson-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">
+                      Mark as complete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+          document.getElementById('complete-lesson-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('complete-lesson-btn') as HTMLButtonElement;
+            if (btn) {
+              btn.disabled = true;
+              btn.textContent = 'Saving...';
+            }
+            try {
+              const res = await post<CompleteLessonResponse>(`/courses/${courseId}/complete_lesson`, {
+                course_item_id: item.id,
+              });
+              if (res.course_complete) {
+                loadCurrentItem();
+              } else if (res.next_item) {
+                loadCurrentItem();
+              } else {
+                loadCurrentItem();
+              }
+            } catch (e: unknown) {
+              const err = e as { body?: { error?: string; errors?: string[] } };
+              const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error';
+              showError(msg);
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Mark as complete';
+              }
+            }
+          });
+          return;
+        }
+
+        if (item.item_type === 'Quiz') {
+          const quizId = item.item_id;
+          const quiz = await get<QuizDetail>(`/quizzes/${quizId}`);
+          renderQuiz(quiz, item.id, content);
+          return;
+        }
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading';
+        showError(msg);
+      }
+    }
+
+    function renderQuiz(quiz: QuizDetail, courseItemId: number, contentEl: HTMLElement | null) {
+      if (!contentEl) return;
+      const questionsHtml = quiz.questions
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map(
+          (q) => {
+            const opts =
+              q.question_type === 'true_false'
+                ? Object.entries(q.options || {})
+                    .map(([k, v]) => `<label class="flex items-center gap-2"><input type="radio" name="q_${q.id}" value="${escapeHtml(k)}" /> ${escapeHtml(v)}</label>`)
+                    .join('')
+                : Object.entries(q.options || {})
+                    .map(([k, v]) => `<label class="flex items-center gap-2"><input type="radio" name="q_${q.id}" value="${escapeHtml(k)}" /> ${escapeHtml(v)}</label>`)
+                    .join('');
+            return `
+              <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <p class="font-medium text-[#2B2B2B] mb-3">${escapeHtml(q.body)}</p>
+                <div class="flex flex-col gap-2">${opts}</div>
+              </div>
+            `;
+          }
+        )
+        .join('');
+
+      contentEl.innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-[#2B2B2B]">${escapeHtml(quiz.title)}</h2>
+          </div>
+          <form id="quiz-form" class="p-6">
+            ${questionsHtml}
+            <button type="submit" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">Submit answers</button>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('quiz-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const answers: Record<string, string> = {};
+        quiz.questions.forEach((q) => {
+          const input = form.querySelector(`input[name="q_${q.id}"]:checked`) as HTMLInputElement;
+          if (input) answers[String(q.id)] = input.value;
+        });
+        const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Submitting...';
+        }
+        try {
+          const res = await post<QuizSubmitResponse>(`/quizzes/${quiz.id}/submit`, { answers });
+          if (contentEl) {
+            contentEl.innerHTML = `
+              <div class="bg-white rounded-xl p-8">
+                <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">Result: ${res.score}%</h2>
+                <p class="text-gray-600 mb-4">${escapeHtml(res.message)}</p>
+                ${res.passed ? '<p class="text-green-600 font-medium mb-6">Passed!</p>' : '<p class="text-amber-600 font-medium mb-6">You can try again.</p>'}
+                ${res.course_complete ? `<a href="/curso/${courseId}" class="text-[#2F7FBF] hover:underline">Back to course</a>` : '<button type="button" id="quiz-continue" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Continue</button>'}
+              </div>
+            `;
+            if (res.course_complete) {
+              const backLink = contentEl.querySelector('a[href*="/curso/"]');
+              if (backLink && !res.next_item) (backLink as HTMLElement).innerHTML = 'Course completed – Back to course';
+            } else if (res.next_item) {
+              document.getElementById('quiz-continue')?.addEventListener('click', () => loadCurrentItem());
+            }
+          }
+        } catch (err: unknown) {
+          const apiErr = err as { body?: { error?: string; errors?: string[] } };
+          const msg = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error submitting';
+          showError(msg);
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Submit answers';
+          }
+        }
+      });
+    }
+
+    if (courseId) loadCurrentItem();
+  </script>
+</BaseLayout>

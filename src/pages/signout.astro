@@ -1,0 +1,31 @@
+---
+import '../styles/index.css';
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerrando sesión...</title>
+  </head>
+  <body>
+    <p class="p-8 text-center text-gray-600">Cerrando sesión...</p>
+    <script>
+      (async function () {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('lopez_academy_jwt') : null;
+        if (token) {
+          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+          try {
+            await fetch(`${base}/users/sign_out`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+            });
+          } catch (_) {}
+          try {
+            localStorage.removeItem('lopez_academy_jwt');
+          } catch (_) {}
+        }
+        window.location.href = '/';
+      })();
+    </script>
+  </body>
+</html>
