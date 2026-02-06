@@ -11,31 +11,31 @@ export function getStaticPaths() {
 
 const { course } = Astro.props;
 ---
-<Layout title="Nueva lección - AprendePlus">
+<Layout title="New lesson - AprendePlus">
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-xl mx-auto px-6">
       <div class="mb-8">
         <a href={`/admin/curso/${course.id}/lecciones`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver a lecciones
+          Back to lessons
         </a>
-        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">Nueva lección</h1>
-        <p class="text-gray-600 text-sm">Curso: {course.title}</p>
+        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">New lesson</h1>
+        <p class="text-gray-600 text-sm">Course: {course.title}</p>
       </div>
 
       <form class="space-y-6 bg-white border border-gray-200 rounded-xl p-6">
         <div>
-          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Título de la lección *</label>
-          <input type="text" id="title" name="title" required placeholder="Ej: Introducción al tema" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
+          <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Lesson title *</label>
+          <input type="text" id="title" name="title" required placeholder="e.g. Introduction to the topic" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
         </div>
         <div>
-          <label for="duration" class="block text-sm font-medium text-[#2B2B2B] mb-2">Duración *</label>
-          <input type="text" id="duration" name="duration" required placeholder="Ej: 12:30" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
+          <label for="duration" class="block text-sm font-medium text-[#2B2B2B] mb-2">Duration *</label>
+          <input type="text" id="duration" name="duration" required placeholder="e.g. 12:30" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
         </div>
         <div class="flex justify-end gap-3">
-          <a href={`/admin/curso/${course.id}/lecciones`} class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</a>
+          <a href={`/admin/curso/${course.id}/lecciones`} class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</a>
           <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] font-medium">
-            Crear y editar contenido
+            Create and edit content
           </button>
         </div>
       </form>
@@ -46,7 +46,7 @@ const { course } = Astro.props;
 <script>
   document.querySelector('form')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    alert('Sin backend: la lección no se guarda. Añade lecciones desde los datos del curso.');
+    alert('No backend: lesson is not saved. Add lessons from the course data.');
     window.location.href = window.location.pathname.replace('/leccion/nueva', '/lecciones');
   });
 </script>

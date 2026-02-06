@@ -3,35 +3,35 @@ import Layout from '../../layouts/Layout.astro';
 import { courses } from '../../data/courses';
 ---
 
-<Layout title="Gestión de Cursos - AprendePlus" currentPath="/admin">
+<Layout title="Course Management - AprendePlus" currentPath="/admin">
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-7xl mx-auto px-6">
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Gestión de Cursos</h1>
-          <p class="text-gray-600">Administra el contenido de la plataforma</p>
+          <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Course Management</h1>
+          <p class="text-gray-600">Manage the platform content</p>
         </div>
         <div class="flex items-center gap-3">
           <a href="/admin/curso/nuevo" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
-            + Crear Curso
+            + Create Course
           </a>
         </div>
       </div>
 
       <div class="mb-6">
-        <input type="text" id="admin-search" placeholder="Buscar cursos..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+        <input type="text" id="admin-search" placeholder="Search courses..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
       </div>
 
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table class="w-full">
           <thead class="bg-[#EEEEEE]">
             <tr>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Curso</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Categoría</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Nivel</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Lecciones</th>
-              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Estudiantes</th>
-              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Acciones</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Course</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Category</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Level</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Lessons</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Students</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Actions</th>
             </tr>
           </thead>
           <tbody id="admin-tbody" class="divide-y divide-gray-200">
@@ -50,15 +50,15 @@ import { courses } from '../../data/courses';
                   <span class="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-[#FFF0CE] text-[#2B2B2B]">{course.category}</span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-700">{course.level}</td>
-                <td class="px-6 py-4 text-sm text-gray-700">{course.lessons.length} lecciones</td>
+                <td class="px-6 py-4 text-sm text-gray-700">{course.lessons.length} lessons</td>
                 <td class="px-6 py-4 text-sm text-gray-700">{course.students}</td>
                 <td class="px-6 py-4">
                   <div class="flex items-center justify-center gap-2">
-                    <a href={`/admin/curso/${course.id}/configuracion`} class="p-2 text-gray-600 hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Configurar acceso y parámetros">
+                    <a href={`/admin/curso/${course.id}/configuracion`} class="p-2 text-gray-600 hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Configure access and parameters">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </a>
-                    <a href={`/admin/curso/${course.id}/editar`} class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Ver y editar">👁</a>
-                    <button type="button" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">🗑</button>
+                    <a href={`/admin/curso/${course.id}/editar`} class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="View and edit">👁</a>
+                    <button type="button" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">🗑</button>
                   </div>
                 </td>
               </tr>
@@ -69,19 +69,19 @@ import { courses } from '../../data/courses';
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
         <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Total Cursos</p>
+          <p class="text-sm text-gray-700 mb-1">Total Courses</p>
           <p class="text-3xl font-bold text-[#2B2B2B]">{courses.length}</p>
         </div>
         <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Total Lecciones</p>
+          <p class="text-sm text-gray-700 mb-1">Total Lessons</p>
           <p class="text-3xl font-bold text-[#2B2B2B]">{courses.reduce((sum, c) => sum + c.lessons.length, 0)}</p>
         </div>
         <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Total Estudiantes</p>
+          <p class="text-sm text-gray-700 mb-1">Total Students</p>
           <p class="text-3xl font-bold text-[#2B2B2B]">{courses.reduce((sum, c) => sum + c.students, 0)}</p>
         </div>
         <div class="bg-[#FFF0CE] rounded-xl p-6">
-          <p class="text-sm text-gray-700 mb-1">Rating Promedio</p>
+          <p class="text-sm text-gray-700 mb-1">Average Rating</p>
           <p class="text-3xl font-bold text-[#2B2B2B]">{(courses.reduce((s, c) => s + c.rating, 0) / courses.length).toFixed(1)}</p>
         </div>
       </div>

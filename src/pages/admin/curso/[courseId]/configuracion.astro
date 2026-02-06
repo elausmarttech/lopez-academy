@@ -13,34 +13,34 @@ export function getStaticPaths() {
 const { course } = Astro.props;
 const allUsers = users.filter((u) => u.role === 'user');
 ---
-<Layout title={`Configurar ${course.title} - AprendePlus`}>
+<Layout title={`Configure ${course.title} - AprendePlus`}>
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-4xl mx-auto px-6">
       <div class="mb-8">
         <a href="/admin" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver a la lista de cursos
+          Back to course list
         </a>
-        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Configurar curso: {course.title}</h1>
-        <p class="text-gray-600">Controla parámetros y el acceso de usuarios al curso y sus lecciones</p>
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">Configure course: {course.title}</h1>
+        <p class="text-gray-600">Control parameters and user access to the course and its lessons</p>
       </div>
 
       <div class="space-y-8">
-        <!-- Parámetros del curso -->
+        <!-- Course parameters -->
         <div class="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 class="text-xl font-bold text-[#2B2B2B] mb-4">Parámetros del curso</h2>
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-4">Course parameters</h2>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-[#2B2B2B] mb-2">Orden de lecciones</label>
+              <label class="block text-sm font-medium text-[#2B2B2B] mb-2">Lesson order</label>
               <select class="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]">
-                <option>Secuencial (por defecto)</option>
-                <option>Libre (el usuario elige)</option>
+                <option>Sequential (default)</option>
+                <option>Free (user chooses)</option>
               </select>
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-medium text-[#2B2B2B]">Requerir completar lección anterior</p>
-                <p class="text-sm text-gray-600">Los usuarios deben completar cada lección en orden</p>
+                <p class="font-medium text-[#2B2B2B]">Require completing previous lesson</p>
+                <p class="text-sm text-gray-600">Users must complete each lesson in order</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" checked class="sr-only peer" />
@@ -50,10 +50,10 @@ const allUsers = users.filter((u) => u.role === 'user');
           </div>
         </div>
 
-        <!-- Control de acceso de usuarios -->
+        <!-- User access control -->
         <div class="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">Acceso de usuarios al curso</h2>
-          <p class="text-sm text-gray-600 mb-6">Selecciona qué usuarios tienen acceso a este curso y sus lecciones</p>
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">User access to course</h2>
+          <p class="text-sm text-gray-600 mb-6">Select which users have access to this course and its lessons</p>
 
           <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex-1">
@@ -62,21 +62,21 @@ const allUsers = users.filter((u) => u.role === 'user');
                 <input
                   type="text"
                   id="user-access-search"
-                  placeholder="Buscar por nombre o correo..."
+                  placeholder="Search by name or email..."
                   class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"
                 />
               </div>
             </div>
             <div class="flex items-center gap-4">
-              <span class="text-sm font-medium text-[#2B2B2B]">Acceso:</span>
+              <span class="text-sm font-medium text-[#2B2B2B]">Access:</span>
               <div class="flex gap-4">
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="access-mode" value="all" class="w-4 h-4 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
-                  <span class="text-sm text-gray-700">Todos los usuarios</span>
+                  <span class="text-sm text-gray-700">All users</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="access-mode" value="specific" checked class="w-4 h-4 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
-                  <span class="text-sm text-gray-700">Usuarios específicos</span>
+                  <span class="text-sm text-gray-700">Specific users</span>
                 </label>
               </div>
             </div>
@@ -97,7 +97,7 @@ const allUsers = users.filter((u) => u.role === 'user');
                     </div>
                   </div>
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <span class="text-sm text-gray-600">Acceso habilitado</span>
+                    <span class="text-sm text-gray-600">Access enabled</span>
                     <input type="checkbox" checked={hasAccess} class="w-5 h-5 rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
                   </label>
                 </div>
@@ -127,7 +127,7 @@ const allUsers = users.filter((u) => u.role === 'user');
                   </div>
                 </div>
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <span class="text-sm text-gray-600">Habilitada</span>
+                  <span class="text-sm text-gray-600">Enabled</span>
                   <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
                 </label>
               </div>
@@ -137,7 +137,7 @@ const allUsers = users.filter((u) => u.role === 'user');
 
         <div class="flex justify-end">
           <button type="button" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors font-medium">
-            Guardar cambios
+            Save changes
           </button>
         </div>
       </div>

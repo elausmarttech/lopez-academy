@@ -17,57 +17,57 @@ export function getStaticPaths() {
 
 const { course, lesson, lessonIndex } = Astro.props;
 ---
-<Layout title={`Editar: ${lesson.title} - AprendePlus`}>
+<Layout title={`Edit: ${lesson.title} - AprendePlus`}>
   <div class="min-h-screen bg-white py-12">
     <div class="max-w-2xl mx-auto px-6">
       <div class="mb-8">
         <a href={`/admin/curso/${course.id}/lecciones`} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Volver a lecciones
+          Back to lessons
         </a>
-        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">Lección {lessonIndex + 1}: {lesson.title}</h1>
-        <p class="text-gray-600 text-sm">Añade bloques de video (con texto) o formularios/test con preguntas Verdadero/Falso y Selección múltiple.</p>
+        <h1 class="text-2xl font-bold text-[#2B2B2B] mb-1">Lesson {lessonIndex + 1}: {lesson.title}</h1>
+        <p class="text-gray-600 text-sm">Add video blocks (with text) or forms/quizzes with True/False and Multiple choice questions.</p>
       </div>
 
-      <!-- Info básica -->
+      <!-- Basic info -->
       <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-        <h2 class="text-lg font-semibold text-[#2B2B2B] mb-4">Información básica</h2>
+        <h2 class="text-lg font-semibold text-[#2B2B2B] mb-4">Basic information</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">Título</label>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Title</label>
             <input type="text" value={lesson.title} class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">Duración</label>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Duration</label>
             <input type="text" value={lesson.duration} placeholder="12:30" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
           </div>
         </div>
       </div>
 
-      <!-- Contenido: bloques uno por uno -->
+      <!-- Content: blocks one by one -->
       <div class="bg-white border border-gray-200 rounded-xl p-6">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-semibold text-[#2B2B2B]">Contenido de la lección</h2>
+          <h2 class="text-lg font-semibold text-[#2B2B2B]">Lesson content</h2>
           <div class="flex gap-2">
             <button type="button" id="add-video" class="px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] text-sm font-medium">
               + Video
             </button>
             <button type="button" id="add-formulario" class="px-4 py-2 bg-[#E2BC73] text-[#2B2B2B] rounded-lg hover:bg-[#d4a85f] text-sm font-medium">
-              + Formulario / Test
+              + Form / Quiz
             </button>
           </div>
         </div>
 
         <div id="content-blocks" class="space-y-6">
-          <!-- Los bloques se añaden aquí uno por uno -->
-          <p id="empty-blocks" class="text-gray-500 text-sm text-center py-8">Añade el primer contenido: video o formulario/test.</p>
+          <!-- Blocks are added here one by one -->
+          <p id="empty-blocks" class="text-gray-500 text-sm text-center py-8">Add the first content: video or form/quiz.</p>
         </div>
       </div>
 
       <div class="flex justify-end gap-3 mt-6">
-        <a href={`/admin/curso/${course.id}/lecciones`} class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</a>
+        <a href={`/admin/curso/${course.id}/lecciones`} class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</a>
         <button type="button" id="save-lesson" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] font-medium">
-          Guardar lección
+          Save lesson
         </button>
       </div>
     </div>
@@ -92,21 +92,21 @@ const { course, lesson, lessonIndex } = Astro.props;
       html = `
         <div class="content-block border border-gray-200 rounded-lg p-4 bg-[#FFF0CE]/20" data-type="video" data-id="${id}">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-[#2B2B2B]">📹 Video (incluye texto)</span>
-            <button type="button" class="block-delete text-red-500 hover:bg-red-50 p-1 rounded text-sm">Eliminar</button>
+            <span class="text-sm font-medium text-[#2B2B2B]">📹 Video (includes text)</span>
+            <button type="button" class="block-delete text-red-500 hover:bg-red-50 p-1 rounded text-sm">Delete</button>
           </div>
           <div class="space-y-3">
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">URL del video</label>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Video URL</label>
               <input type="url" placeholder="https://..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Título</label>
-              <input type="text" placeholder="Título del video" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <label class="block text-xs font-medium text-gray-600 mb-1">Title</label>
+              <input type="text" placeholder="Video title" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Texto / Descripción</label>
-              <textarea rows="3" placeholder="Texto que acompaña al video..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Text / Description</label>
+              <textarea rows="3" placeholder="Text that accompanies the video..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
             </div>
           </div>
         </div>
@@ -115,20 +115,20 @@ const { course, lesson, lessonIndex } = Astro.props;
       html = `
         <div class="content-block formulario-block border border-gray-200 rounded-lg p-4 bg-[#FFF0CE]/20" data-type="formulario" data-id="${id}">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-[#2B2B2B]">📋 Formulario / Test</span>
-            <button type="button" class="block-delete text-red-500 hover:bg-red-50 p-1 rounded text-sm">Eliminar</button>
+            <span class="text-sm font-medium text-[#2B2B2B]">📋 Form / Quiz</span>
+            <button type="button" class="block-delete text-red-500 hover:bg-red-50 p-1 rounded text-sm">Delete</button>
           </div>
           <div class="space-y-3 mb-4">
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Título del formulario (opcional)</label>
-              <input type="text" placeholder="Ej: Quiz de repaso" class="formulario-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <label class="block text-xs font-medium text-gray-600 mb-1">Form title (optional)</label>
+              <input type="text" placeholder="e.g. Review quiz" class="formulario-title w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </div>
           </div>
           <div class="formulario-questions space-y-4 border-t border-gray-200 pt-4">
-            <p class="formulario-empty text-gray-500 text-xs italic">Sin preguntas. Añade la primera.</p>
+            <p class="formulario-empty text-gray-500 text-xs italic">No questions. Add the first one.</p>
           </div>
           <button type="button" class="add-question mt-3 px-3 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] text-xs font-medium">
-            + Añadir pregunta
+            + Add question
           </button>
         </div>
       `;
@@ -151,27 +151,27 @@ const { course, lesson, lessonIndex } = Astro.props;
       <div class="question-item border border-gray-200 rounded-lg p-3 bg-white" data-q-id="${qId}">
         <div class="flex items-center justify-between mb-2">
           <select class="question-type text-sm border border-gray-300 rounded px-2 py-1">
-            <option value="truefalse">Verdadero / Falso</option>
-            <option value="multiple">Selección múltiple</option>
+            <option value="truefalse">True / False</option>
+            <option value="multiple">Multiple choice</option>
           </select>
-          <button type="button" class="question-delete text-red-500 hover:bg-red-50 p-1 rounded text-xs">Eliminar</button>
+          <button type="button" class="question-delete text-red-500 hover:bg-red-50 p-1 rounded text-xs">Delete</button>
         </div>
         <div class="space-y-2">
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Enunciado</label>
-            <textarea rows="2" placeholder="Escribe la pregunta..." class="question-enunciado w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Question</label>
+            <textarea rows="2" placeholder="Write the question..." class="question-enunciado w-full px-2 py-1 border border-gray-300 rounded text-sm"></textarea>
           </div>
           <div class="question-answers-truefalse">
-            <label class="block text-xs font-medium text-gray-600 mb-1">Respuesta correcta</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Correct answer</label>
             <div class="flex gap-4">
-              <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${qId}-ans" value="true" /><span class="text-sm">Verdadero</span></label>
-              <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${qId}-ans" value="false" /><span class="text-sm">Falso</span></label>
+              <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${qId}-ans" value="true" /><span class="text-sm">True</span></label>
+              <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${qId}-ans" value="false" /><span class="text-sm">False</span></label>
             </div>
           </div>
           <div class="question-answers-multiple hidden">
-            <label class="block text-xs font-medium text-gray-600 mb-1">Opciones (marca la correcta)</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Options (mark the correct one)</label>
             <div class="options-list space-y-1"></div>
-            <button type="button" class="add-option mt-1 text-xs text-[#2F7FBF] hover:underline">+ Añadir opción</button>
+            <button type="button" class="add-option mt-1 text-xs text-[#2F7FBF] hover:underline">+ Add option</button>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@ const { course, lesson, lessonIndex } = Astro.props;
       const optId = `opt-${questionCount}-${optionsList.children.length}`;
       const opt = document.createElement('label');
       opt.className = 'flex items-center gap-2 text-sm';
-      opt.innerHTML = `<input type="radio" name="${qItem.dataset.qId || 'q'}-correct" value="${optId}" /><input type="text" placeholder="Opción" class="option-text flex-1 px-2 py-1 border rounded text-sm" /><button type="button" class="option-remove text-red-500 text-xs">✕</button>`;
+      opt.innerHTML = `<input type="radio" name="${qItem.dataset.qId || 'q'}-correct" value="${optId}" /><input type="text" placeholder="Option" class="option-text flex-1 px-2 py-1 border rounded text-sm" /><button type="button" class="option-remove text-red-500 text-xs">✕</button>`;
       optionsList.appendChild(opt);
     } else if (target.classList.contains('option-remove')) {
       target.closest('label')?.remove();
@@ -237,14 +237,14 @@ const { course, lesson, lessonIndex } = Astro.props;
         const optId = `opt-${qItem.dataset.qId || 'q'}-0`;
         const opt = document.createElement('label');
         opt.className = 'flex items-center gap-2 text-sm';
-        opt.innerHTML = `<input type="radio" name="${qItem.dataset.qId || 'q'}-correct" value="${optId}" /><input type="text" placeholder="Opción" class="option-text flex-1 px-2 py-1 border rounded text-sm" /><button type="button" class="option-remove text-red-500 text-xs">✕</button>`;
+        opt.innerHTML = `<input type="radio" name="${qItem.dataset.qId || 'q'}-correct" value="${optId}" /><input type="text" placeholder="Option" class="option-text flex-1 px-2 py-1 border rounded text-sm" /><button type="button" class="option-remove text-red-500 text-xs">✕</button>`;
         optionsList.appendChild(opt);
       }
     }
   });
 
   document.getElementById('save-lesson')?.addEventListener('click', () => {
-    alert('Lección guardada. (Frontend: los datos no se guardan sin backend)');
+    alert('Lesson saved. (Frontend: data is not saved without backend)');
     window.location.href = `/admin/curso/${courseId}/lecciones`;
   });
 </script>

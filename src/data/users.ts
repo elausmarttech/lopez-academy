@@ -15,7 +15,7 @@ export const users: User[] = [
     id: 'admin-1',
     name: 'Administrador',
     email: 'admin@empresa.com',
-    password: 'admin123', // En producción, esto debe estar hasheado
+    password: 'admin123', // In production, this should be hashed
     role: 'admin',
     enabled: true,
     enrolledCourses: [],
