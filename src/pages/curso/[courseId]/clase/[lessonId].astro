@@ -73,14 +73,28 @@ const nextLesson = hasNext ? course.lessons[lessonIndex + 1] : null;
       <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <div class="p-6 lg:p-8">
           <div class="max-w-4xl mx-auto">
-            <div class="w-full aspect-video bg-[#E0DDD5] rounded-lg flex items-center justify-center shadow-sm border border-gray-200/50 overflow-hidden">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 bg-[#2F7FBF] rounded-full flex items-center justify-center mx-auto mb-4 hover:bg-[#256A9E] transition-colors cursor-pointer">
-                  <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <div class="w-full aspect-video rounded-lg shadow-sm border border-gray-200/50 overflow-hidden bg-black">
+              {lesson.videoEmbedId ? (
+                <div style="position: relative; overflow: hidden; aspect-ratio: 16/9; width: 100%;">
+                  <iframe
+                    src={`https://www.aistudios.com/player?id=${lesson.videoEmbedId}`}
+                    loading="lazy"
+                    title={lesson.title}
+                    allow="encrypted-media; fullscreen;"
+                    style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0; margin: 0; overflow: hidden;"
+                  />
                 </div>
-                <p class="text-[#2B2B2B] font-medium mb-1">{lesson.title}</p>
-                <p class="text-gray-600 text-sm">Duration: {lesson.duration}</p>
-              </div>
+              ) : (
+                <div class="w-full h-full flex items-center justify-center bg-[#E0DDD5]">
+                  <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-[#2F7FBF] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    <p class="text-[#2B2B2B] font-medium mb-1">{lesson.title}</p>
+                    <p class="text-gray-600 text-sm">Duration: {lesson.duration}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
