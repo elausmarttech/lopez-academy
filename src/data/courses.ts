@@ -22,8 +22,10 @@ export interface Lesson {
   completed: boolean;
   /** Additional text or content below the video (optional) */
   content?: string;
-  /** AI Studios embed ID (from aistudios.com/player?id=XXX) - optional */
+  /** AI Studios embed ID - optional */
   videoEmbedId?: string;
+  /** Si true, usa embed simple (player, sin recorte). Si false/undefined, usa share con recorte */
+  videoEmbedSimple?: boolean;
 }
 
 export const courses: Course[] = [
@@ -53,8 +55,8 @@ export const courses: Course[] = [
       'Deploy applications to production'
     ],
     lessons: [
-      { id: '1-1', title: 'Introduction to modern web development', duration: '12:30', completed: false, videoEmbedId: '698347fe8597e4c47b47e361', content: 'In this lesson we will explore the fundamentals of modern web development. We will see how technologies have evolved and what tools professionals use today.\n\n**Lesson objectives:**\n- Understand the structure of a web application\n- Get to know the current technology ecosystem\n- Set up the environment for the following lessons' },
-      { id: '1-2', title: 'Development environment setup', duration: '18:45', completed: false },
+      { id: '1-1', title: 'Introduction to modern web development', duration: '12:30', completed: false, videoEmbedId: '698b3f80bbe9649f06601db0', content: 'In this lesson we will explore the fundamentals of modern web development. We will see how technologies have evolved and what tools professionals use today.\n\n**Lesson objectives:**\n- Understand the structure of a web application\n- Get to know the current technology ecosystem\n- Set up the environment for the following lessons' },
+      { id: '1-2', title: 'Development environment setup', duration: '18:45', completed: false, videoEmbedId: '698b3f80bbe9649f06601db0', videoEmbedSimple: true },
       { id: '1-3', title: 'React fundamentals', duration: '25:15', completed: false },
       { id: '1-4', title: 'Components and Props', duration: '22:00', completed: false },
       { id: '1-5', title: 'State and lifecycle', duration: '28:30', completed: false },
