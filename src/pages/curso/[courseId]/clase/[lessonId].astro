@@ -211,7 +211,10 @@ const nextLesson = hasNext ? course.lessons[lessonIndex + 1] : null;
     });
   </script>
 
-  {lesson.h5pEmbedUrl && (
+  {lesson.h5pEmbedUrl && lesson.h5pEmbedUrl.includes('h5p.org') && (
     <script src="https://h5p.org/sites/all/modules/h5p/library/js/h5p-resizer.js" charset="UTF-8"></script>
+  )}
+  {lesson.h5pEmbedUrl && lesson.h5pEmbedUrl.includes('lopezinsurance.h5p.com') && (
+    <script src="https://lopezinsurance.h5p.com/js/h5p-resizer.js" charset="UTF-8"></script>
   )}
 </BaseLayout>

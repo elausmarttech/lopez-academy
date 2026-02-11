@@ -61,7 +61,7 @@ export const courses: Course[] = [
       { id: '1-2', title: 'Development environment setup', duration: '18:45', completed: false, videoEmbedId: '698b3f80bbe9649f06601db0', videoEmbedSimple: true },
       { id: '1-3', title: 'React fundamentals', duration: '25:15', completed: false, h5pEmbedUrl: 'https://h5p.org/h5p/embed/620' },
       { id: '1-4', title: 'Components and Props', duration: '22:00', completed: false, h5pEmbedUrl: 'https://h5p.org/h5p/embed/617' },
-      { id: '1-5', title: 'State and lifecycle', duration: '28:30', completed: false },
+      { id: '1-5', title: 'State and lifecycle', duration: '28:30', completed: false, h5pEmbedUrl: 'https://lopezinsurance.h5p.com/content/1292822698066434728/embed' },
       { id: '1-6', title: 'React Hooks', duration: '32:10', completed: false },
       { id: '1-7', title: 'Routing with React Router', duration: '20:45', completed: false },
       { id: '1-8', title: 'Node.js and Express basics', duration: '30:20', completed: false },
