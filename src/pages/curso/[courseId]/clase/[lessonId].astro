@@ -74,7 +74,16 @@ const nextLesson = hasNext ? course.lessons[lessonIndex + 1] : null;
         <div class="p-6 lg:p-8">
           <div class="max-w-4xl mx-auto">
             <div class="w-full aspect-video rounded-lg shadow-sm border border-gray-200/50 overflow-hidden bg-[#F8F7F4]">
-              {lesson.videoEmbedId ? (
+              {lesson.h5pEmbedUrl ? (
+                <iframe
+                  src={lesson.h5pEmbedUrl}
+                  class="w-full h-full"
+                  frameborder="0"
+                  allowfullscreen
+                  allow="geolocation *; microphone *; camera *; midi *; encrypted-media *"
+                  title={lesson.title}
+                />
+              ) : lesson.videoEmbedId ? (
                 lesson.videoEmbedSimple ? (
                   <div style="position: relative; overflow: hidden; aspect-ratio: 1920/1080; width: 100%;">
                     <iframe
@@ -201,4 +210,8 @@ const nextLesson = hasNext ? course.lessons[lessonIndex + 1] : null;
       }
     });
   </script>
+
+  {lesson.h5pEmbedUrl && (
+    <script src="https://h5p.org/sites/all/modules/h5p/library/js/h5p-resizer.js" charset="UTF-8"></script>
+  )}
 </BaseLayout>
