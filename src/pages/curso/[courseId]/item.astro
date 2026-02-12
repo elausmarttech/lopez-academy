@@ -5,22 +5,31 @@ export const prerender = false;
 const { courseId } = Astro.params;
 ---
 <BaseLayout title="Curso - AprendePlus" showFooter={false}>
-  <div id="curso-item-root" class="min-h-screen bg-[#F8F7F4] flex flex-col" data-course-id={courseId ?? ''}>
-    <div class="flex-1 p-6 lg:p-8">
-      <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-6">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Back to course
-      </a>
+  <div id="curso-item-root" class="min-h-screen bg-[#F8F7F4] flex" data-course-id={courseId ?? ''}>
+    <aside id="course-outline-sidebar" class="w-72 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen sticky top-0 overflow-y-auto">
+      <div class="p-4 border-b border-gray-200">
+        <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-3 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to course
+        </a>
+        <h2 id="sidebar-course-title" class="font-semibold text-[#2B2B2B] text-sm">Loading...</h2>
+      </div>
+      <nav id="sidebar-outline" class="p-3 space-y-1 text-sm">
+        <p class="text-gray-500 py-2">Loading outline...</p>
+      </nav>
+    </aside>
+    <main class="flex-1 p-6 lg:p-8 overflow-auto">
       <div id="item-content" class="max-w-4xl mx-auto">
         <p class="text-gray-500">Loading...</p>
       </div>
       <div id="item-error" class="hidden max-w-4xl mx-auto mt-6 text-red-600"></div>
-    </div>
+    </main>
   </div>
 
   <script>
     import { get, post } from '@/lib/api';
     import type {
+      CourseDetail,
       CurrentItemPayload,
       CurrentItemComplete,
       QuizDetail,
@@ -47,13 +56,51 @@ const { courseId } = Astro.params;
       }
     }
 
+    function renderSidebar(course: CourseDetail, currentItemId: number | null) {
+      const titleEl = document.getElementById('sidebar-course-title');
+      const outlineEl = document.getElementById('sidebar-outline');
+      if (titleEl) titleEl.textContent = course.title ?? 'Course';
+      if (!outlineEl || !course.course_items?.length) {
+        if (outlineEl) outlineEl.innerHTML = '<p class="text-gray-500 py-2">No items in this course.</p>';
+        return;
+      }
+      const nextId = course.next_item?.id ?? null;
+      outlineEl.innerHTML = course.course_items
+        .map((item, i) => {
+          const isCompleted = item.completed;
+          const isCurrent = item.id === currentItemId;
+          const isNext = item.id === nextId;
+          const isLocked = !isCompleted && !isNext;
+          const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
+          const linkClass = isCurrent
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+            : isLocked
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+          const icon = item.item_type === 'Quiz'
+            ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>'
+            : '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const badge = isCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${i + 1}</span>`;
+          const tag = isLocked ? 'div' : 'a';
+          const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
+          return `<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`;
+        })
+        .join('');
+    }
+
     async function loadCurrentItem(): Promise<void> {
       const content = document.getElementById('item-content');
       const errorEl = document.getElementById('item-error');
       if (errorEl) errorEl.classList.add('hidden');
 
       try {
-        const data = await get<CurrentItemPayload | CurrentItemComplete>(`/courses/${courseId}/current_item`);
+        const [course, data] = await Promise.all([
+          get<CourseDetail>(`/courses/${courseId}`),
+          get<CurrentItemPayload | CurrentItemComplete>(`/courses/${courseId}/current_item`),
+        ]);
+        renderSidebar(course, null);
 
         if ('course_complete' in data && data.course_complete) {
           if (content) {
@@ -61,7 +108,7 @@ const { courseId } = Astro.params;
               <div class="bg-white rounded-xl p-8 text-center">
                 <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">Course completed!</h2>
                 <p class="text-gray-600 mb-6">${escapeHtml((data as CurrentItemComplete).message || 'You have completed this course.')}</p>
-                <a href="/curso/${courseId}" class="inline-flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Back to course</a>
+                <a href="/curso/${courseId}" class="inline-flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] cursor-pointer">Back to course</a>
               </div>
             `;
           }
@@ -69,62 +116,20 @@ const { courseId } = Astro.params;
         }
 
         const item = data as CurrentItemPayload;
-
-        if (item.item_type === 'Lesson') {
-          const lesson = item.item as { id: number; title: string; content: string };
-          if (content) {
-            content.innerHTML = `
-              <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
-                <div class="p-6 lg:p-8">
-                  <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">${escapeHtml(lesson.title)}</h2>
-                  <div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content || '')}</div>
-                  <div class="mt-8 pt-6 border-t border-gray-200">
-                    <button type="button" id="complete-lesson-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">
-                      Mark as complete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `;
-          }
-          document.getElementById('complete-lesson-btn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('complete-lesson-btn') as HTMLButtonElement;
-            if (btn) {
-              btn.disabled = true;
-              btn.textContent = 'Saving...';
-            }
-            try {
-              const res = await post<CompleteLessonResponse>(`/courses/${courseId}/complete_lesson`, {
-                course_item_id: item.id,
-              });
-              if (res.course_complete) {
-                loadCurrentItem();
-              } else if (res.next_item) {
-                loadCurrentItem();
-              } else {
-                loadCurrentItem();
-              }
-            } catch (e: unknown) {
-              const err = e as { body?: { error?: string; errors?: string[] } };
-              const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error';
-              showError(msg);
-              if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Mark as complete';
-              }
-            }
-          });
-          return;
-        }
-
-        if (item.item_type === 'Quiz') {
-          const quizId = item.item_id;
-          const quiz = await get<QuizDetail>(`/quizzes/${quizId}`);
-          renderQuiz(quiz, item.id, content);
-          return;
-        }
+        // Redirect to canonical URL with item id so Back/Next stay consistent
+        window.location.replace(`/curso/${courseId}/item/${item.id}`);
+        return;
       } catch (e: unknown) {
         const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        if (err.status === 404) {
+          const content = document.getElementById('item-content');
+          const sidebar = document.getElementById('course-outline-sidebar');
+          if (content) content.innerHTML = `<div class="bg-white rounded-xl p-8 text-center"><p class="text-gray-600 mb-4">This course or item was not found or you don't have access to it.</p><a href="/cursos" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline">← Back to my courses</a></div>`;
+          if (sidebar) sidebar.innerHTML = `<div class="p-4"><a href="/cursos" class="text-[#2F7FBF] hover:underline text-sm">← Back to my courses</a></div>`;
+          const errEl = document.getElementById('item-error');
+          if (errEl) errEl.classList.add('hidden');
+          return;
+        }
         const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading';
         showError(msg);
       }

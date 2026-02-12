@@ -56,21 +56,29 @@ const { courseId } = Astro.params;
         </div>
         <div class="question-options-multiple space-y-2">
           <label class="block text-sm font-medium text-[#2B2B2B]">Options</label>
-          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="a" /><input type="text" class="question-option-a flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="A" /></div>
-          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="b" /><input type="text" class="question-option-b flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="B" /></div>
-          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="c" /><input type="text" class="question-option-c flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="C" /></div>
-          <div class="flex gap-2 items-center"><input type="radio" class="question-correct-mc" name="" value="d" /><input type="text" class="question-option-d flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="D" /></div>
+          <div class="correct-option-row flex gap-2 items-center px-2 py-1.5 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-mc" name="" value="a" /><input type="text" class="question-option-a flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="A" /></div>
+          <div class="correct-option-row flex gap-2 items-center px-2 py-1.5 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-mc" name="" value="b" /><input type="text" class="question-option-b flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="B" /></div>
+          <div class="correct-option-row flex gap-2 items-center px-2 py-1.5 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-mc" name="" value="c" /><input type="text" class="question-option-c flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="C" /></div>
+          <div class="correct-option-row flex gap-2 items-center px-2 py-1.5 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-mc" name="" value="d" /><input type="text" class="question-option-d flex-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="D" /></div>
         </div>
         <div class="question-options-tf hidden">
           <label class="block text-sm font-medium text-[#2B2B2B]">Correct answer</label>
           <div class="flex gap-4 mt-2">
-            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" class="question-correct-tf" name="" value="true" /> True</label>
-            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" class="question-correct-tf" name="" value="false" /> False</label>
+            <label class="correct-option-tf flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-tf" name="" value="true" /> True</label>
+            <label class="correct-option-tf flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-shadow duration-200"><input type="radio" class="question-correct-tf" name="" value="false" /> False</label>
           </div>
         </div>
       </div>
     </div>
   </template>
+
+  <style>
+    .correct-option-row:has(.question-correct-mc:checked),
+    .correct-option-tf:has(.question-correct-tf:checked) {
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.6), 0 0 14px rgba(34, 197, 94, 0.25);
+      background-color: rgba(34, 197, 94, 0.06);
+    }
+  </style>
 </Layout>
 
 <script>
@@ -147,6 +155,25 @@ const { courseId } = Astro.params;
     });
   }
 
+  function validateCorrectAnswers(): { valid: boolean; message?: string } {
+    const list = questionsContainer?.querySelectorAll('.question-block') ?? [];
+    let index = 0;
+    for (const block of list) {
+      index++;
+      const body = (block.querySelector('.question-body') as HTMLTextAreaElement)?.value?.trim() ?? '';
+      if (!body) continue;
+      const question_type = (block.querySelector('.question-type') as HTMLSelectElement)?.value ?? 'multiple_choice';
+      if (question_type === 'true_false') {
+        const checked = block.querySelector('.question-correct-tf:checked');
+        if (!checked) return { valid: false, message: `Select the correct answer for Question ${index}.` };
+      } else {
+        const checked = block.querySelector('.question-correct-mc:checked');
+        if (!checked) return { valid: false, message: `Select the correct answer for Question ${index}.` };
+      }
+    }
+    return { valid: true };
+  }
+
   function collectQuestions(): Array<{ body: string; question_type: string; correct_answer: string; option_a?: string; option_b?: string; option_c?: string; option_d?: string }> {
     const list = questionsContainer?.querySelectorAll('.question-block') ?? [];
     const out: Array<Record<string, unknown>> = [];
@@ -158,11 +185,12 @@ const { courseId } = Astro.params;
       let correct_answer: string;
       if (question_type === 'true_false') {
         const radio = block.querySelector('.question-correct-tf:checked') as HTMLInputElement | null;
-        correct_answer = radio?.value === 'false' ? 'false' : 'true';
+        if (!radio) return;
+        correct_answer = radio.value === 'false' ? 'false' : 'true';
       } else {
         const radio = block.querySelector('.question-correct-mc:checked') as HTMLInputElement | null;
-        correct_answer = (radio?.value ?? 'a').toLowerCase();
-        if (!['a', 'b', 'c', 'd'].includes(correct_answer)) correct_answer = 'a';
+        if (!radio || !['a', 'b', 'c', 'd'].includes(radio.value.toLowerCase())) return;
+        correct_answer = radio.value.toLowerCase();
       }
 
       const q: Record<string, unknown> = { body, question_type, correct_answer };
@@ -186,6 +214,11 @@ const { courseId } = Astro.params;
     const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
     if (!title) {
       if (errorEl) { errorEl.textContent = 'Enter a quiz title.'; errorEl.classList.remove('hidden'); }
+      return;
+    }
+    const validation = validateCorrectAnswers();
+    if (!validation.valid) {
+      if (errorEl) { errorEl.textContent = validation.message ?? 'Select the correct answer for each question.'; errorEl.classList.remove('hidden'); }
       return;
     }
     const questions = collectQuestions();

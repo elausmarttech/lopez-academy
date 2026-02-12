@@ -15,14 +15,14 @@ export const prerender = false;
           <a href="/cursos" class="flex items-center gap-2 bg-white border-2 border-[#2F7FBF] text-[#2F7FBF] px-6 py-3 rounded-lg hover:bg-[#2F7FBF] hover:text-white transition-colors font-medium">
             View as user
           </a>
-          <button type="button" id="btn-add-user" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors">
+          <button type="button" id="btn-add-user" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] transition-colors cursor-pointer">
             + Add User
           </button>
         </div>
       </div>
 
       <div class="mb-6">
-        <input type="text" id="user-search" placeholder="Search by email..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+        <input type="text" id="user-search" placeholder="Search by email or name..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
       </div>
 
       <div id="user-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
@@ -31,14 +31,16 @@ export const prerender = false;
         <table class="w-full">
           <thead class="bg-[#EEEEEE]">
             <tr>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Name</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Email</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Role</th>
+              <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Assigned courses</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Created</th>
               <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Actions</th>
             </tr>
           </thead>
           <tbody id="users-tbody" class="divide-y divide-gray-200">
-            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+            <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -53,13 +55,21 @@ export const prerender = false;
   </div>
 
   <!-- Add/Edit user modal -->
-  <div id="user-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-xl max-w-md w-full p-6">
+  <div id="user-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 my-8">
       <h3 id="user-modal-title" class="text-xl font-bold text-[#2B2B2B] mb-4">Add user</h3>
       <form id="user-form" class="space-y-4">
         <input type="hidden" id="user-id" />
         <div>
-          <label for="user-email" class="block text-sm font-medium text-[#2B2B2B] mb-1">Email</label>
+          <label for="user-first-name" class="block text-sm font-medium text-[#2B2B2B] mb-1">First name *</label>
+          <input type="text" id="user-first-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
+        </div>
+        <div>
+          <label for="user-last-name" class="block text-sm font-medium text-[#2B2B2B] mb-1">Last name *</label>
+          <input type="text" id="user-last-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
+        </div>
+        <div>
+          <label for="user-email" class="block text-sm font-medium text-[#2B2B2B] mb-1">Email *</label>
           <input type="email" id="user-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
         </div>
         <div id="user-password-fields">
@@ -72,9 +82,21 @@ export const prerender = false;
             <input type="password" id="user-password-confirmation" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F7FBF]" />
           </div>
         </div>
+        <div id="new-user-row" class="hidden">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="user-new-user-cb" class="rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
+            <span class="text-sm font-medium text-[#2B2B2B]">New user? (assign all default courses)</span>
+          </label>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#2B2B2B] mb-2">Assigned courses</label>
+          <div id="user-courses-list" class="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+            <p class="text-gray-500 text-sm py-2">Loading courses...</p>
+          </div>
+        </div>
         <div class="flex gap-3 pt-2">
-          <button type="submit" class="flex-1 bg-[#2F7FBF] text-white py-2 rounded-lg hover:bg-[#256A9E]">Save</button>
-          <button type="button" id="user-modal-cancel" class="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>
+          <button type="submit" class="flex-1 bg-[#2F7FBF] text-white py-2 rounded-lg hover:bg-[#256A9E] cursor-pointer">Save</button>
+          <button type="button" id="user-modal-cancel" class="px-4 py-2 border border-gray-300 rounded-lg cursor-pointer">Cancel</button>
         </div>
       </form>
     </div>
@@ -83,7 +105,7 @@ export const prerender = false;
 
 <script>
   import { get, post, patch, del } from '@/lib/api';
-  import type { AdminUser } from '@/lib/api-types';
+  import type { AdminUser, AdminCourse } from '@/lib/api-types';
 
   const tbody = document.getElementById('users-tbody');
   const searchEl = document.getElementById('user-search') as HTMLInputElement;
@@ -93,10 +115,21 @@ export const prerender = false;
   const modalTitle = document.getElementById('user-modal-title');
   const form = document.getElementById('user-form') as HTMLFormElement;
   const userIdInput = document.getElementById('user-id') as HTMLInputElement;
+  const userFirstNameInput = document.getElementById('user-first-name') as HTMLInputElement;
+  const userLastNameInput = document.getElementById('user-last-name') as HTMLInputElement;
   const userEmailInput = document.getElementById('user-email') as HTMLInputElement;
   const userPasswordInput = document.getElementById('user-password') as HTMLInputElement;
   const userPasswordConfInput = document.getElementById('user-password-confirmation') as HTMLInputElement;
   const passwordFields = document.getElementById('user-password-fields');
+  const userCoursesList = document.getElementById('user-courses-list');
+  const newUserRow = document.getElementById('new-user-row');
+  const newUserCb = document.getElementById('user-new-user-cb') as HTMLInputElement;
+
+  let courses: AdminCourse[] = [];
+
+  function getDefaultCourseIds(): number[] {
+    return courses.filter((c) => c.default === true).map((c) => c.id);
+  }
 
   function showError(msg: string) {
     if (errorEl) {
@@ -111,15 +144,62 @@ export const prerender = false;
     return div.innerHTML;
   }
 
-  function openModal(editUser?: AdminUser) {
+  function renderCourseCheckboxes(selectedIds: number[]) {
+    if (!userCoursesList) return;
+    if (!courses.length) {
+      userCoursesList.innerHTML = '<p class="text-gray-500 text-sm">No courses available.</p>';
+      return;
+    }
+    userCoursesList.innerHTML = courses
+      .map(
+        (c) => `
+      <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
+        <input type="checkbox" class="user-course-cb rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" value="${c.id}" ${selectedIds.includes(c.id) ? 'checked' : ''} />
+        <span class="text-sm text-[#2B2B2B]">${escapeHtml(c.title)}</span>
+      </label>
+    `
+      )
+      .join('');
+  }
+
+  function getSelectedCourseIds(): number[] {
+    const checkboxes = userCoursesList?.querySelectorAll<HTMLInputElement>('.user-course-cb:checked');
+    if (!checkboxes) return [];
+    return Array.from(checkboxes).map((cb) => Number(cb.value));
+  }
+
+  async function openModal(editUser?: AdminUser) {
     if (modal) modal.classList.remove('hidden');
     if (modalTitle) modalTitle.textContent = editUser ? 'Edit user' : 'Add user';
     if (userIdInput) userIdInput.value = editUser ? String(editUser.id) : '';
+    if (userFirstNameInput) userFirstNameInput.value = editUser?.first_name ?? '';
+    if (userLastNameInput) userLastNameInput.value = editUser?.last_name ?? '';
     if (userEmailInput) userEmailInput.value = editUser?.email ?? '';
     if (userPasswordInput) userPasswordInput.value = '';
     if (userPasswordConfInput) userPasswordConfInput.value = '';
-    if (passwordFields) (passwordFields as HTMLElement).style.display = editUser ? 'block' : 'block';
+    if (passwordFields) (passwordFields as HTMLElement).style.display = 'block';
+    if (userPasswordInput) userPasswordInput.required = !editUser;
     if (userEmailInput) userEmailInput.readOnly = !!editUser;
+    if (newUserRow) newUserRow.classList.toggle('hidden', !!editUser);
+    if (newUserCb) {
+      newUserCb.checked = false;
+      newUserCb.onchange = () => {
+        if (newUserCb.checked) renderCourseCheckboxes(getDefaultCourseIds());
+        else renderCourseCheckboxes([]);
+      };
+    }
+    const assignedIds = editUser?.assigned_course_ids ?? [];
+    renderCourseCheckboxes(assignedIds);
+  }
+
+  async function openModalForEdit(userId: number) {
+    try {
+      const user = await get<AdminUser>(`/admin/users/${userId}`);
+      openModal(user);
+    } catch (e: unknown) {
+      const err = e as { body?: { error?: string } };
+      showError(err?.body?.error || 'Error loading user');
+    }
   }
 
   function closeModal() {
@@ -135,18 +215,26 @@ export const prerender = false;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const id = userIdInput?.value;
+    const id = userIdInput?.value?.trim();
+    const firstName = userFirstNameInput?.value?.trim();
+    const lastName = userLastNameInput?.value?.trim();
     const email = userEmailInput?.value?.trim();
     const password = userPasswordInput?.value;
     const passwordConfirmation = userPasswordConfInput?.value;
-    if (!email) return;
+    const assignedCourseIds = getSelectedCourseIds();
+    if (!firstName || !lastName || !email) {
+      showError('First name, last name and email are required.');
+      return;
+    }
     if (!id && (!password || password !== passwordConfirmation)) {
       showError('Passwords do not match');
       return;
     }
     try {
       if (id) {
-        const body: { user: { email?: string; password?: string; password_confirmation?: string } } = { user: {} };
+        const body: { user: { first_name?: string; last_name?: string; email?: string; password?: string; password_confirmation?: string; assigned_course_ids?: number[] } } = {
+          user: { first_name: firstName, last_name: lastName, email, assigned_course_ids: assignedCourseIds },
+        };
         if (password) {
           body.user.password = password;
           body.user.password_confirmation = passwordConfirmation || password;
@@ -154,7 +242,14 @@ export const prerender = false;
         await patch(`/admin/users/${id}`, body);
       } else {
         await post('/admin/users', {
-          user: { email, password, password_confirmation: passwordConfirmation },
+          user: {
+            email,
+            password,
+            password_confirmation: passwordConfirmation,
+            first_name: firstName,
+            last_name: lastName,
+            assigned_course_ids: assignedCourseIds.length ? assignedCourseIds : undefined,
+          },
         });
       }
       closeModal();
@@ -167,28 +262,35 @@ export const prerender = false;
 
   function render(users: AdminUser[]) {
     if (!tbody) return;
+    const nameSearch = (u: AdminUser) => [u.first_name ?? '', u.last_name ?? '', u.email ?? ''].join(' ').toLowerCase();
     tbody.innerHTML = users
       .map(
-        (u) => `
-      <tr class="user-row hover:bg-[#FFF0CE]/30 transition-colors" data-email="${escapeHtml((u.email || '').toLowerCase())}">
+        (u) => {
+          const fullName = [u.first_name ?? '', u.last_name ?? ''].filter(Boolean).join(' ') || '—';
+          const assignedCount = u.assigned_course_ids?.length ?? 0;
+          return `
+      <tr class="user-row hover:bg-[#FFF0CE]/30 transition-colors" data-search="${escapeHtml(nameSearch(u))}">
+        <td class="px-6 py-4 font-medium text-[#2B2B2B]">${escapeHtml(fullName)}</td>
         <td class="px-6 py-4">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-[#2F7FBF] rounded-full flex items-center justify-center text-white font-semibold">${escapeHtml((u.email || '?').charAt(0).toUpperCase())}</div>
-            <p class="font-medium text-[#2B2B2B]">${escapeHtml(u.email)}</p>
-          </div>
+          <p class="text-[#2B2B2B]">${escapeHtml(u.email ?? '')}</p>
         </td>
         <td class="px-6 py-4">
           <span class="inline-flex px-3 py-1 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role === 'admin' ? 'Admin' : 'User'}</span>
         </td>
+        <td class="px-6 py-4 text-sm text-gray-600">${assignedCount} course${assignedCount !== 1 ? 's' : ''}</td>
         <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(u.created_at?.slice(0, 10) || '')}</td>
         <td class="px-6 py-4">
           <div class="flex justify-center gap-2">
-            <button type="button" class="user-edit p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg" data-id="${u.id}" data-email="${escapeHtml(u.email)}">✏️</button>
-            <button type="button" class="user-delete p-2 text-red-500 hover:bg-red-50 rounded-lg" data-id="${u.id}">🗑</button>
+            <button type="button" class="user-edit p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg cursor-pointer" data-id="${u.id}">✏️</button>
+            ${u.role === 'admin'
+              ? `<span class="user-delete-disabled inline-flex p-2 text-gray-300 rounded-lg cursor-not-allowed" title="Admin users cannot be deleted">🗑</span>`
+              : `<button type="button" class="user-delete p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer" data-id="${u.id}">🗑</button>`
+            }
           </div>
         </td>
       </tr>
-    `
+    `;
+        }
       )
       .join('');
 
@@ -197,8 +299,7 @@ export const prerender = false;
     tbody.querySelectorAll('.user-edit').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = (btn as HTMLElement).dataset.id;
-        const email = (btn as HTMLElement).dataset.email;
-        if (id && email) openModal({ id: Number(id), email, role: '', created_at: '' });
+        if (id) openModalForEdit(Number(id));
       });
     });
 
@@ -215,6 +316,27 @@ export const prerender = false;
         }
       });
     });
+    // Admin users get .user-delete-disabled (no click handler) — they cannot be deleted
+  }
+
+  searchEl?.addEventListener('input', () => {
+    const q = (searchEl.value ?? '').toLowerCase().trim();
+    document.querySelectorAll('.user-row').forEach((row: Element) => {
+      const el = row as HTMLElement;
+      const match = !q || (el.dataset.search ?? '').includes(q);
+      el.style.display = match ? '' : 'none';
+    });
+  });
+
+  async function loadCourses() {
+    try {
+      courses = (await get<AdminCourse[]>('/admin/courses')) ?? [];
+    } catch {
+      courses = [];
+    }
+    if (userCoursesList && modal?.classList.contains('hidden') === false) {
+      renderCourseCheckboxes(getSelectedCourseIds());
+    }
   }
 
   async function load() {
@@ -222,6 +344,7 @@ export const prerender = false;
     try {
       const data = (await get<AdminUser[]>('/admin/users')) ?? [];
       render(data);
+      if (!courses.length) await loadCourses();
     } catch (e: unknown) {
       const err = e as { status?: number; body?: { error?: string } };
       if (err.status === 403) {
@@ -229,18 +352,9 @@ export const prerender = false;
         return;
       }
       showError(err?.body?.error || 'Error loading users');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-600">Error loading</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-red-600">Error loading</td></tr>';
     }
   }
 
-  searchEl?.addEventListener('input', () => {
-    const q = (searchEl.value ?? '').toLowerCase();
-    document.querySelectorAll('.user-row').forEach((row: Element) => {
-      const el = row as HTMLElement;
-      const match = !q || (el.dataset.email ?? '').includes(q);
-      el.style.display = match ? '' : 'none';
-    });
-  });
-
-  load();
+  loadCourses().then(() => load());
 </script>

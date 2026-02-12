@@ -13,7 +13,7 @@ import '../styles/index.css';
       (async function () {
         const token = typeof localStorage !== 'undefined' ? localStorage.getItem('lopez_academy_jwt') : null;
         if (token) {
-          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'https://lopez-university-db.onrender.com';
           try {
             await fetch(`${base}/users/sign_out`, {
               method: 'DELETE',

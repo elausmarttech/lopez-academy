@@ -2,10 +2,24 @@
 
 // --- Learner API ---
 
+/**
+ * Current user from GET /users/me (or GET /profile, GET /users/current).
+ * Auth: Authorization: Bearer <token>.
+ * Response may be wrapped as { user: CurrentUser } or direct. role: 0 = Learner, 1 = Admin.
+ */
+export interface CurrentUser {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string | number;
+}
+
 export interface CourseListItem {
   id: number;
   title: string;
   description: string;
+  default?: boolean;
   progress?: { completed: number; total: number };
 }
 
@@ -16,12 +30,15 @@ export interface CourseItemRef {
   item_id: number;
   title: string;
   completed: boolean;
+  content?: string; // Lesson content (for lessons only, included in course show response)
+  video?: string; // Lesson video URL (when item_type is Lesson)
 }
 
 export interface CourseDetail {
   id: number;
   title: string;
   description: string;
+  default?: boolean;
   course_items: CourseItemRef[];
   next_item: {
     id: number;
@@ -35,6 +52,7 @@ export interface LessonItem {
   id: number;
   title: string;
   content: string;
+  video?: string; // Video URL (e.g. H5P embed)
 }
 
 export interface QuizItemRef {
@@ -104,14 +122,18 @@ export interface CompleteLessonResponse {
 export interface AdminUser {
   id: number;
   email: string;
+  first_name: string;
+  last_name: string;
   role: string;
   created_at: string;
+  assigned_course_ids?: number[];
 }
 
 export interface AdminCourse {
   id: number;
   title: string;
   description: string;
+  default?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -132,6 +154,7 @@ export interface AdminLesson {
   id: number;
   title: string;
   content: string;
+  video_url?: string;
   position?: number;
 }
 

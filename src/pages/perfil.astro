@@ -1,0 +1,162 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+<BaseLayout title="My profile - AprendePlus">
+  <div class="min-h-screen bg-[#F8F7F4]">
+    <section class="bg-[#FFF0CE] py-10">
+      <div class="max-w-3xl mx-auto px-6">
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">My profile</h1>
+        <p class="text-gray-600">Your account information</p>
+      </div>
+    </section>
+
+    <section class="py-12">
+      <div class="max-w-3xl mx-auto px-6 space-y-8">
+        <div id="profile-loading" class="text-gray-500">Loading...</div>
+        <div id="profile-error" class="hidden p-4 bg-red-50 text-red-700 rounded-lg"></div>
+        <div id="profile-unavailable" class="hidden mt-2 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm">
+          Profile data could not be loaded. Ensure your API exposes the current user (e.g. <code class="bg-amber-100 px-1 rounded">GET /users/me</code> or <code class="bg-amber-100 px-1 rounded">GET /profile</code>) returning user with email, first_name, last_name, role.
+        </div>
+        <div id="profile-card" class="hidden bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8">
+            <h2 class="text-lg font-semibold text-[#2B2B2B] mb-4">Personal information</h2>
+            <dl class="space-y-4">
+              <div>
+                <dt class="text-sm font-medium text-gray-500">First name</dt>
+                <dd id="profile-first-name" class="mt-1 text-[#2B2B2B]">—</dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Last name</dt>
+                <dd id="profile-last-name" class="mt-1 text-[#2B2B2B]">—</dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                <dd id="profile-email" class="mt-1 text-[#2B2B2B]">—</dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Role</dt>
+                <dd id="profile-role" class="mt-1 text-[#2B2B2B]">—</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div id="diplomas-section" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="p-6 md:p-8">
+            <h2 class="text-lg font-semibold text-[#2B2B2B] mb-2">Your diplomas</h2>
+            <p class="text-sm text-gray-600 mb-4">Certificates for courses you have completed.</p>
+            <p id="diplomas-count" class="text-sm text-[#2F7FBF] mb-4">—</p>
+            <a href="/cursos/diplomas" class="inline-flex items-center gap-2 text-[#2F7FBF] font-medium hover:underline">
+              View my diplomas
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { get } from '@/lib/api';
+    import type { CurrentUser, CourseListItem } from '@/lib/api-types';
+
+    const loadingEl = document.getElementById('profile-loading');
+    const errorEl = document.getElementById('profile-error');
+    const unavailableEl = document.getElementById('profile-unavailable');
+    const cardEl = document.getElementById('profile-card');
+    const firstNameEl = document.getElementById('profile-first-name');
+    const lastNameEl = document.getElementById('profile-last-name');
+    const emailEl = document.getElementById('profile-email');
+    const roleEl = document.getElementById('profile-role');
+    const diplomasCountEl = document.getElementById('diplomas-count');
+
+    function isCompleted(c: CourseListItem): boolean {
+      const p = c.progress;
+      return !!(p && p.total > 0 && p.completed === p.total);
+    }
+
+    /** Unwrap { user: ... } or use response as user. Map role number to label. */
+    function normalizeUser(data: unknown): CurrentUser | null {
+      if (!data || typeof data !== 'object') return null;
+      const raw = (data as { user?: CurrentUser }).user ?? (data as CurrentUser);
+      if (!raw || typeof raw !== 'object') return null;
+      const u = raw as CurrentUser;
+      const role =
+        typeof u.role === 'number'
+          ? u.role === 1
+            ? 'Admin'
+            : 'Learner'
+          : typeof u.role === 'string'
+            ? u.role
+            : 'Learner';
+      return {
+        id: u.id,
+        email: u.email ?? '',
+        first_name: u.first_name,
+        last_name: u.last_name,
+        role,
+      };
+    }
+
+    async function fetchCurrentUser(): Promise<CurrentUser | null> {
+      const endpoints = ['/users/me', '/profile', '/users/current'];
+      for (const path of endpoints) {
+        try {
+          const data = await get<unknown>(path);
+          const user = normalizeUser(data);
+          if (user) return user;
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    async function load() {
+      if (loadingEl) loadingEl.classList.remove('hidden');
+      if (errorEl) errorEl.classList.add('hidden');
+      if (cardEl) cardEl.classList.add('hidden');
+
+      try {
+        const user = await fetchCurrentUser();
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (cardEl) {
+          if (firstNameEl) firstNameEl.textContent = user?.first_name?.trim() || '—';
+          if (lastNameEl) lastNameEl.textContent = user?.last_name?.trim() || '—';
+          if (emailEl) emailEl.textContent = user?.email?.trim() || '—';
+          if (roleEl) roleEl.textContent = user?.role ?? 'Learner';
+          cardEl.classList.remove('hidden');
+        }
+        if (unavailableEl) {
+          unavailableEl.classList.toggle('hidden', !!user?.email);
+        }
+
+        const courses = (await get<CourseListItem[]>('/courses')) ?? [];
+        const completedCount = courses.filter(isCompleted).length;
+        if (diplomasCountEl) {
+          diplomasCountEl.textContent = completedCount === 0
+            ? 'You have no diplomas yet. Complete a course to earn one.'
+            : `You have ${completedCount} diploma${completedCount !== 1 ? 's' : ''}.`;
+        }
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string } };
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (errorEl) {
+          errorEl.textContent = err?.body && typeof err.body === 'object' && 'error' in err.body ? (err.body as { error: string }).error : 'Error loading profile';
+          errorEl.classList.remove('hidden');
+        }
+        if (cardEl) {
+          cardEl.classList.remove('hidden');
+          if (firstNameEl) firstNameEl.textContent = '—';
+          if (lastNameEl) lastNameEl.textContent = '—';
+          if (emailEl) emailEl.textContent = '—';
+          if (roleEl) roleEl.textContent = '—';
+        }
+      }
+    }
+
+    load();
+  </script>
+</BaseLayout>

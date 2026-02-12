@@ -61,13 +61,28 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
             >
               My Courses
             </a>
+            <a
+              href="/cursos/diplomas"
+              class:list={[
+                'text-base transition-colors',
+                isActive('/cursos/diplomas') ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
+              ]}
+            >
+              Diplomas
+            </a>
           </>
         )}
         <div class="flex items-center gap-4 ml-4 pl-6 border-l border-white/20">
-          <div class="flex items-center gap-2.5 text-white text-base">
+          <a
+            href="/perfil"
+            class:list={[
+              'flex items-center gap-2.5 text-base transition-colors',
+              currentPath === '/perfil' ? 'text-[#FFF0CE] font-semibold' : 'text-white hover:text-white/90'
+            ]}
+          >
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            <span>My Profile</span>
-          </div>
+            <span id="profile-greeting">My Profile</span>
+          </a>
           <a href="/signout" class="flex items-center gap-2 text-white hover:opacity-90 transition-opacity p-1 rounded" title="Sign out">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </a>
@@ -76,15 +91,34 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
     </div>
   </div>
   <script>
-    import { request } from '@/lib/api';
+    import { request, get } from '@/lib/api';
+    import type { CurrentUser } from '@/lib/api-types';
     (async function () {
       const adminLink = document.getElementById('admin-link');
-      if (!adminLink) return;
-      try {
-        await request('/admin/courses', { skipForbiddenRedirect: true });
-        adminLink.classList.remove('hidden');
-      } catch {
-        adminLink.classList.add('hidden');
+      if (adminLink) {
+        try {
+          await request('/admin/courses', { skipForbiddenRedirect: true });
+          adminLink.classList.remove('hidden');
+        } catch {
+          adminLink.classList.add('hidden');
+        }
+      }
+      const greetingEl = document.getElementById('profile-greeting');
+      if (greetingEl) {
+        const endpoints = ['/users/me', '/profile', '/users/current'];
+        for (const path of endpoints) {
+          try {
+            const data = await get<unknown>(path);
+            const wrapped = data && typeof data === 'object' && 'user' in data ? (data as { user: CurrentUser }).user : (data as CurrentUser);
+            if (wrapped && (wrapped.id != null || wrapped.email)) {
+              const name = wrapped.first_name?.trim() || wrapped.email?.trim() || 'Guest';
+              greetingEl.textContent = `Hello! ${name}`;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
       }
     })();
   </script>

@@ -8,9 +8,9 @@ const { courseId, lessonId } = Astro.params;
   <div id="admin-leccion-editar-root" class="min-h-screen bg-white py-12" data-course-id={courseId ?? ''} data-lesson-id={lessonId ?? ''}>
     <div class="max-w-2xl mx-auto px-6">
       <div class="mb-8">
-        <a id="back-link" href="#" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4">
+        <a id="back-link" href="#" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline mb-4 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Back to lessons
+          Back to course
         </a>
         <h1 id="page-title" class="text-2xl font-bold text-[#2B2B2B] mb-1">Edit lesson</h1>
       </div>
@@ -27,11 +27,16 @@ const { courseId, lessonId } = Astro.params;
           <label for="content" class="block text-sm font-medium text-[#2B2B2B] mb-2">Content</label>
           <textarea id="content" name="content" rows="8" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]"></textarea>
         </div>
+        <div>
+          <label for="video-url" class="block text-sm font-medium text-[#2B2B2B] mb-2">Video URL (optional)</label>
+          <input type="url" id="video-url" name="video-url" placeholder="https://example.com/video.mp4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
+          <p class="mt-1 text-xs text-gray-500">Leave empty to use the default video URL</p>
+        </div>
         <div class="flex justify-between">
-          <button type="button" id="btn-delete" class="px-4 py-2 text-red-500 border border-red-300 rounded-lg hover:bg-red-50">Delete lesson</button>
+          <button type="button" id="btn-delete" class="px-4 py-2 text-red-500 border border-red-300 rounded-lg hover:bg-red-50 cursor-pointer">Delete lesson</button>
           <div class="flex gap-3">
-            <a id="cancel-link" href="#" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</a>
-            <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] font-medium">Save</button>
+            <a id="cancel-link" href="#" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 cursor-pointer">Cancel</a>
+            <button type="submit" id="save-btn" class="px-6 py-3 bg-gray-400 text-white rounded-lg cursor-not-allowed transition-colors font-medium" disabled>Save</button>
           </div>
         </div>
       </form>
@@ -54,18 +59,57 @@ const { courseId, lessonId } = Astro.params;
   const form = document.getElementById('lesson-form') as HTMLFormElement;
   const errorEl = document.getElementById('form-error');
   const btnDelete = document.getElementById('btn-delete');
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement | null;
 
-  if (backLink) backLink.setAttribute('href', `/admin/curso/${courseId}/lecciones`);
-  if (cancelLink) cancelLink.setAttribute('href', `/admin/curso/${courseId}/lecciones`);
+  let originalTitle = '';
+  let originalContent = '';
+  let originalVideoUrl = '';
+
+  function checkForChanges() {
+    if (!saveBtn) return;
+    const titleInput = form?.querySelector('#title') as HTMLInputElement | undefined;
+    const contentInput = form?.querySelector('#content') as HTMLTextAreaElement | undefined;
+    const videoUrlInput = form?.querySelector('#video-url') as HTMLInputElement | undefined;
+    const currentTitle = titleInput?.value?.trim() ?? '';
+    const currentContent = contentInput?.value?.trim() ?? '';
+    const currentVideoUrl = videoUrlInput?.value?.trim() ?? '';
+    const hasChanges = currentTitle !== originalTitle || currentContent !== originalContent || currentVideoUrl !== originalVideoUrl;
+    if (hasChanges) {
+      saveBtn.disabled = false;
+      saveBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+      saveBtn.classList.add('bg-[#2F7FBF]', 'hover:bg-[#256A9E]', 'cursor-pointer');
+    } else {
+      saveBtn.disabled = true;
+      saveBtn.classList.remove('bg-[#2F7FBF]', 'hover:bg-[#256A9E]', 'cursor-pointer');
+      saveBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+    }
+  }
+
+  if (backLink) backLink.setAttribute('href', `/admin/curso/${courseId}/editar`);
+  if (cancelLink) cancelLink.setAttribute('href', `/admin/curso/${courseId}/editar`);
 
   async function load() {
     try {
       const lesson = await get<AdminLesson>(`/admin/courses/${courseId}/lessons/${lessonId}`);
+      originalTitle = lesson.title?.trim() ?? '';
+      originalContent = lesson.content?.trim() ?? '';
+      originalVideoUrl = lesson.video_url?.trim() ?? '';
       if (pageTitle) pageTitle.textContent = `Edit: ${lesson.title}`;
       (form.querySelector('#title') as HTMLInputElement).value = lesson.title ?? '';
       (form.querySelector('#content') as HTMLTextAreaElement).value = lesson.content ?? '';
+      (form.querySelector('#video-url') as HTMLInputElement).value = lesson.video_url ?? '';
       if (formLoading) formLoading.classList.add('hidden');
       if (form) form.classList.remove('hidden');
+      checkForChanges();
+      const titleInput = form.querySelector('#title') as HTMLInputElement;
+      const contentInput = form.querySelector('#content') as HTMLTextAreaElement;
+      const videoUrlInput = form.querySelector('#video-url') as HTMLInputElement;
+      titleInput?.addEventListener('input', checkForChanges);
+      titleInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
+      contentInput?.addEventListener('input', checkForChanges);
+      contentInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
+      videoUrlInput?.addEventListener('input', checkForChanges);
+      videoUrlInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
     } catch (e: unknown) {
       const err = e as { status?: number; body?: { error?: string } };
       if (formLoading) formLoading.textContent = 'Error loading.';
@@ -81,10 +125,13 @@ const { courseId, lessonId } = Astro.params;
     if (errorEl) errorEl.classList.add('hidden');
     const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
     const content = (form.querySelector('#content') as HTMLTextAreaElement)?.value?.trim() ?? '';
+    const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() || undefined;
     if (!title) return;
     try {
-      await patch(`/admin/courses/${courseId}/lessons/${lessonId}`, { lesson: { title, content } });
-      window.location.href = `/admin/curso/${courseId}/lecciones`;
+      const lessonPayload: { title: string; content: string; video_url?: string } = { title, content };
+      if (videoUrl) lessonPayload.video_url = videoUrl;
+      await patch(`/admin/courses/${courseId}/lessons/${lessonId}`, { lesson: lessonPayload });
+      window.location.href = `/admin/curso/${courseId}/editar`;
     } catch (err: unknown) {
       const apiErr = err as { body?: { error?: string; errors?: string[] } };
       if (errorEl) {
@@ -98,7 +145,7 @@ const { courseId, lessonId } = Astro.params;
     if (!confirm('Delete this lesson? It will be removed from the course.')) return;
     try {
       await del(`/admin/courses/${courseId}/lessons/${lessonId}`);
-      window.location.href = `/admin/curso/${courseId}/lecciones`;
+      window.location.href = `/admin/curso/${courseId}/editar`;
     } catch (err: unknown) {
       const apiErr = err as { body?: { error?: string } };
       if (errorEl) {

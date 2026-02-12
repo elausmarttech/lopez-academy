@@ -28,6 +28,12 @@ const { courseId } = Astro.params;
           <label for="description" class="block text-sm font-medium text-[#2B2B2B] mb-2">Description *</label>
           <textarea id="description" name="description" rows="4" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent"></textarea>
         </div>
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="course-default" class="rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
+            <span class="text-sm font-medium text-[#2B2B2B]">Default course?</span>
+          </label>
+        </div>
         <div class="flex justify-end gap-3 pt-4">
           <a href="/admin" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</a>
           <button type="submit" id="save-btn" class="px-6 py-3 bg-gray-400 text-white rounded-lg cursor-not-allowed transition-colors font-medium" disabled>Save changes</button>
@@ -52,13 +58,29 @@ const { courseId } = Astro.params;
           <div id="drop-preview" class="hidden absolute left-0 right-0 h-1.5 bg-[#2F7FBF] rounded-full pointer-events-none z-10 shadow-lg" style="top: 0;"></div>
         </div>
       </div>
+
+      <div id="learners-section" class="hidden mt-8 bg-white border border-gray-200 rounded-xl p-6">
+        <div class="mb-4">
+          <h2 class="text-xl font-bold text-[#2B2B2B] mb-1">Assigned learners</h2>
+          <p class="text-sm text-gray-600">Users assigned to this course. Add or remove learners; changes are saved immediately.</p>
+        </div>
+        <div id="learners-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+        <ul id="assigned-learners-list" class="space-y-2 mb-6"></ul>
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="add-learner-select" class="text-sm font-medium text-[#2B2B2B]">Add learner:</label>
+          <select id="add-learner-select" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] min-w-[200px]">
+            <option value="">— Select user —</option>
+          </select>
+          <button type="button" id="add-learner-btn" class="px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">Add</button>
+        </div>
+      </div>
     </div>
   </div>
 </Layout>
 
 <script>
   import { get, patch, post, del } from '@/lib/api';
-  import type { AdminCourseWithItems, AdminCourseItem } from '@/lib/api-types';
+  import type { AdminCourseWithItems, AdminCourseItem, AdminUser } from '@/lib/api-types';
 
   const root = document.getElementById('admin-editar-root');
   const courseId = root?.getAttribute('data-course-id') ?? '';
@@ -73,9 +95,18 @@ const { courseId } = Astro.params;
   const itemsList = document.getElementById('course-items-list');
   const itemsError = document.getElementById('items-error');
   const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
-  
+  const learnersSection = document.getElementById('learners-section');
+  const assignedLearnersList = document.getElementById('assigned-learners-list');
+  const addLearnerSelect = document.getElementById('add-learner-select') as HTMLSelectElement;
+  const addLearnerBtn = document.getElementById('add-learner-btn');
+  const learnersError = document.getElementById('learners-error');
+
+  let courseIdNum: number = 0;
+  let allUsers: AdminUser[] = [];
+
   let originalTitle = '';
   let originalDescription = '';
+  let originalDefault = false;
 
   function escapeHtml(s: string): string {
     const div = document.createElement('div');
@@ -304,11 +335,13 @@ const { courseId } = Astro.params;
     if (!saveBtn) return;
     const titleInput = form.querySelector('#title') as HTMLInputElement;
     const descriptionInput = form.querySelector('#description') as HTMLTextAreaElement;
+    const defaultInput = form.querySelector('#course-default') as HTMLInputElement;
     
     const currentTitle = titleInput?.value?.trim() ?? '';
     const currentDescription = descriptionInput?.value?.trim() ?? '';
+    const currentDefault = defaultInput?.checked ?? false;
     
-    const hasChanges = currentTitle !== originalTitle || currentDescription !== originalDescription;
+    const hasChanges = currentTitle !== originalTitle || currentDescription !== originalDescription || currentDefault !== originalDefault;
     
     if (hasChanges && currentTitle && currentDescription) {
       saveBtn.disabled = false;
@@ -321,18 +354,104 @@ const { courseId } = Astro.params;
     }
   }
 
+  function showLearnersError(msg: string) {
+    if (learnersError) {
+      learnersError.textContent = msg;
+      learnersError.classList.remove('hidden');
+    }
+  }
+
+  function getAssignedLearners(): AdminUser[] {
+    return allUsers.filter((u) => u.role !== 'admin' && (u.assigned_course_ids ?? []).includes(courseIdNum));
+  }
+
+  function getUnassignedLearners(): AdminUser[] {
+    return allUsers.filter((u) => u.role !== 'admin' && !(u.assigned_course_ids ?? []).includes(courseIdNum));
+  }
+
+  function learnerLabel(u: AdminUser): string {
+    const name = [u.first_name ?? '', u.last_name ?? ''].filter(Boolean).join(' ') || '—';
+    return `${name} (${u.email ?? ''})`;
+  }
+
+  function renderLearners() {
+    const assigned = getAssignedLearners();
+    const unassigned = getUnassignedLearners();
+    if (assignedLearnersList) {
+      assignedLearnersList.innerHTML = assigned.length === 0
+        ? '<li class="text-sm text-gray-500 py-2">No learners assigned yet.</li>'
+        : assigned
+            .map(
+              (u) => `
+        <li class="flex items-center justify-between gap-4 p-3 border border-gray-200 rounded-lg bg-white">
+          <span class="text-[#2B2B2B]">${escapeHtml(learnerLabel(u))}</span>
+          <button type="button" class="learner-remove px-2 py-1 text-red-500 hover:bg-red-50 rounded text-sm" data-id="${u.id}">Remove</button>
+        </li>
+      `
+            )
+            .join('');
+      assignedLearnersList.querySelectorAll('.learner-remove').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = (btn as HTMLElement).dataset.id;
+          if (id) removeLearner(Number(id));
+        });
+      });
+    }
+    if (addLearnerSelect) {
+      const selected = addLearnerSelect.value;
+      addLearnerSelect.innerHTML = '<option value="">— Select user —</option>' + unassigned.map((u) => `<option value="${u.id}">${escapeHtml(learnerLabel(u))}</option>`).join('');
+      if (selected && unassigned.some((u) => String(u.id) === selected)) addLearnerSelect.value = selected;
+    }
+    if (addLearnerBtn) addLearnerBtn.disabled = unassigned.length === 0;
+  }
+
+  async function addLearner(userId: number) {
+    const user = allUsers.find((u) => u.id === userId);
+    if (!user) return;
+    const ids = user.assigned_course_ids ?? [];
+    if (ids.includes(courseIdNum)) return;
+    if (learnersError) learnersError.classList.add('hidden');
+    try {
+      await patch(`/admin/users/${userId}`, { user: { assigned_course_ids: [...ids, courseIdNum] } });
+      user.assigned_course_ids = [...ids, courseIdNum];
+      renderLearners();
+    } catch (e: unknown) {
+      const err = e as { body?: { error?: string } };
+      showLearnersError(err?.body?.error || 'Error adding learner');
+    }
+  }
+
+  async function removeLearner(userId: number) {
+    const user = allUsers.find((u) => u.id === userId);
+    if (!user) return;
+    const ids = (user.assigned_course_ids ?? []).filter((id) => id !== courseIdNum);
+    if (learnersError) learnersError.classList.add('hidden');
+    try {
+      await patch(`/admin/users/${userId}`, { user: { assigned_course_ids: ids } });
+      user.assigned_course_ids = ids;
+      renderLearners();
+    } catch (e: unknown) {
+      const err = e as { body?: { error?: string } };
+      showLearnersError(err?.body?.error || 'Error removing learner');
+    }
+  }
+
   async function load() {
     try {
       const raw = await get<AdminCourseWithItems | { course: AdminCourseWithItems }>(`/admin/courses/${courseId}`);
       const course = (raw as { course?: AdminCourseWithItems }).course ?? (raw as AdminCourseWithItems);
+      courseIdNum = course?.id ?? Number(courseId);
       const title = course?.title ?? '';
       const description = course?.description ?? '';
       
       originalTitle = title;
       originalDescription = description;
+      originalDefault = (course as { default?: boolean })?.default ?? false;
       
       (form.querySelector('#title') as HTMLInputElement).value = title;
       (form.querySelector('#description') as HTMLTextAreaElement).value = description;
+      const defaultInput = form.querySelector('#course-default') as HTMLInputElement;
+      if (defaultInput) defaultInput.checked = originalDefault;
       
       if (linkNuevaLeccion) linkNuevaLeccion.setAttribute('href', `/admin/curso/${courseId}/leccion/nueva`);
       courseItems = course?.course_items ?? [];
@@ -342,14 +461,24 @@ const { courseId } = Astro.params;
       if (itemsSection) itemsSection.classList.remove('hidden');
       renderItems();
       updateQuizButtonState();
+
+      try {
+        allUsers = (await get<AdminUser[]>('/admin/users')) ?? [];
+      } catch {
+        allUsers = [];
+      }
+      if (learnersSection) learnersSection.classList.remove('hidden');
+      renderLearners();
       
       // Set up change listeners
       const titleInput = form.querySelector('#title') as HTMLInputElement;
       const descriptionInput = form.querySelector('#description') as HTMLTextAreaElement;
+      const defaultInputEl = form.querySelector('#course-default') as HTMLInputElement;
       titleInput?.addEventListener('input', checkForChanges);
       titleInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
       descriptionInput?.addEventListener('input', checkForChanges);
       descriptionInput?.addEventListener('paste', () => setTimeout(checkForChanges, 0));
+      defaultInputEl?.addEventListener('change', checkForChanges);
       
       // Initially disable button
       checkForChanges();
@@ -377,12 +506,14 @@ const { courseId } = Astro.params;
     if (errorEl) errorEl.classList.add('hidden');
     const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
     const description = (form.querySelector('#description') as HTMLTextAreaElement)?.value?.trim();
+    const defaultCourse = (form.querySelector('#course-default') as HTMLInputElement)?.checked ?? false;
     if (!title || !description) return;
     try {
-      await patch(`/admin/courses/${courseId}`, { course: { title, description } });
+      await patch(`/admin/courses/${courseId}`, { course: { title, description, default: defaultCourse } });
       // Update original values after successful save
       originalTitle = title;
       originalDescription = description;
+      originalDefault = defaultCourse;
       checkForChanges();
       window.location.href = '/admin';
     } catch (err: unknown) {
@@ -392,6 +523,11 @@ const { courseId } = Astro.params;
         errorEl.classList.remove('hidden');
       }
     }
+  });
+
+  addLearnerBtn?.addEventListener('click', () => {
+    const val = addLearnerSelect?.value;
+    if (val) addLearner(Number(val));
   });
 
   if (courseId) load();

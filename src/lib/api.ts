@@ -4,10 +4,12 @@
 
 const TOKEN_KEY = 'lopez_academy_jwt';
 
+const DEFAULT_API_URL = 'https://lopez-university-db.onrender.com';
+
 function getBaseUrl(): string {
   const url = import.meta.env.VITE_API_URL;
   if (!url || typeof url !== 'string') {
-    return 'http://localhost:3000';
+    return DEFAULT_API_URL;
   }
   return url.replace(/\/$/, '');
 }

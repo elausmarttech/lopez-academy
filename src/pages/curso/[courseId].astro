@@ -62,8 +62,10 @@ const { courseId } = Astro.params;
         if (actions) {
           const hasCompletedItems = course.course_items?.some(item => item.completed) ?? false;
           const buttonText = hasCompletedItems ? 'Continue course' : 'Start course';
+          const startItemId = course.next_item?.id ?? course.course_items?.[0]?.id;
+          const startHref = startItemId != null ? `/curso/${courseId}/item/${startItemId}` : '#';
           actions.innerHTML = `
-            <a href="/curso/${courseId}/item" class="w-full bg-[#2F7FBF] text-white py-4 rounded-lg hover:bg-[#256A9E] transition-colors flex items-center justify-center gap-2 mb-3">
+            <a href="${startHref}" class="w-full bg-[#2F7FBF] text-white py-4 rounded-lg hover:bg-[#256A9E] transition-colors flex items-center justify-center gap-2 mb-3">
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
               ${buttonText}
             </a>
@@ -80,11 +82,11 @@ const { courseId } = Astro.params;
                 const isLocked = !isCompleted && !isNext;
                 if (isNext) {
                   return `
-                    <a href="/curso/${courseId}/item" class="border-2 border-[#2F7FBF] rounded-lg px-6 py-4 flex items-center gap-4 bg-[#2F7FBF]/5 hover:bg-[#2F7FBF]/10 transition-colors">
+                    <a href="/curso/${courseId}/item/${item.id}" class="border-2 border-[#2F7FBF] rounded-lg px-6 py-4 flex items-center gap-4 bg-[#2F7FBF]/5 hover:bg-[#2F7FBF]/10 transition-colors">
                       <div class="w-8 h-8 bg-[#2F7FBF] text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">${i + 1}</div>
                       <span class="text-xs text-[#2F7FBF] font-medium">${item.item_type}</span>
                       <p class="font-medium text-[#2B2B2B] flex-1">${escapeHtml(item.title)}</p>
-                      <span class="text-[#2F7FBF] text-sm font-medium">Comenzar →</span>
+                      <span class="text-[#2F7FBF] text-sm font-medium">Start →</span>
                     </a>
                   `;
                 }
@@ -117,6 +119,14 @@ const { courseId } = Astro.params;
         document.title = `${course.title} - AprendePlus`;
       } catch (e: unknown) {
         const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        if (err.status === 404) {
+          const notFoundMsg = "This course was not found or you don't have access to it.";
+          if (hero) hero.innerHTML = `<p class="text-gray-300">${escapeHtml(notFoundMsg)}</p><a href="/cursos" class="inline-flex items-center gap-2 mt-4 text-[#FFF0CE] hover:underline">← Back to my courses</a>`;
+          if (actions) actions.innerHTML = `<a href="/cursos" class="block w-full bg-[#2F7FBF] text-white py-3 rounded-lg hover:bg-[#256A9E] text-center">Back to my courses</a>`;
+          if (itemsEl) itemsEl.innerHTML = '';
+          if (errorEl) errorEl.classList.add('hidden');
+          return;
+        }
         const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading course';
         if (errorEl) {
           errorEl.textContent = msg;

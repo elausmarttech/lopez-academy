@@ -5,17 +5,25 @@ export const prerender = false;
 const { courseId, itemId } = Astro.params;
 ---
 <BaseLayout title="Curso - AprendePlus" showFooter={false}>
-  <div id="curso-item-detail-root" class="min-h-screen bg-[#F8F7F4] flex flex-col" data-course-id={courseId ?? ''} data-item-id={itemId ?? ''}>
-    <div class="flex-1 p-6 lg:p-8">
-      <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-6">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Back to course
-      </a>
+  <div id="curso-item-detail-root" class="min-h-screen bg-[#F8F7F4] flex" data-course-id={courseId ?? ''} data-item-id={itemId ?? ''}>
+    <aside id="course-outline-sidebar" class="w-72 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen sticky top-0 overflow-y-auto">
+      <div class="p-4 border-b border-gray-200">
+        <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-3 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to course
+        </a>
+        <h2 id="sidebar-course-title" class="font-semibold text-[#2B2B2B] text-sm">Loading...</h2>
+      </div>
+      <nav id="sidebar-outline" class="p-3 space-y-1 text-sm">
+        <p class="text-gray-500 py-2">Loading outline...</p>
+      </nav>
+    </aside>
+    <main class="flex-1 p-6 lg:p-8 overflow-auto">
       <div id="item-content" class="max-w-4xl mx-auto">
         <p class="text-gray-500">Loading...</p>
       </div>
       <div id="item-error" class="hidden max-w-4xl mx-auto mt-6 text-red-600"></div>
-    </div>
+    </main>
   </div>
 
   <script>
@@ -49,6 +57,40 @@ const { courseId, itemId } = Astro.params;
       }
     }
 
+    function renderSidebar(course: CourseDetail, currentItemId: number | null) {
+      const titleEl = document.getElementById('sidebar-course-title');
+      const outlineEl = document.getElementById('sidebar-outline');
+      if (titleEl) titleEl.textContent = course.title ?? 'Course';
+      if (!outlineEl || !course.course_items?.length) {
+        if (outlineEl) outlineEl.innerHTML = '<p class="text-gray-500 py-2">No items in this course.</p>';
+        return;
+      }
+      const nextId = course.next_item?.id ?? null;
+      outlineEl.innerHTML = course.course_items
+        .map((item, i) => {
+          const isCompleted = item.completed;
+          const isCurrent = item.id === currentItemId;
+          const isNext = item.id === nextId;
+          const isLocked = !isCompleted && !isNext;
+          const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
+          const linkClass = isCurrent
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+            : isLocked
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+          const icon = item.item_type === 'Quiz'
+            ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>'
+            : '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const badge = isCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${i + 1}</span>`;
+          const tag = isLocked ? 'div' : 'a';
+          const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
+          return `<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`;
+        })
+        .join('');
+    }
+
     async function loadItem(): Promise<void> {
       const content = document.getElementById('item-content');
       const errorEl = document.getElementById('item-error');
@@ -62,6 +104,7 @@ const { courseId, itemId } = Astro.params;
       try {
         // Get course detail to find the item and check completion status
         const course = await get<CourseDetail>(`/courses/${courseId}`);
+        renderSidebar(course, itemId);
         const courseItem = course.course_items?.find((item) => item.id === itemId);
         
         if (!courseItem) {
@@ -74,87 +117,149 @@ const { courseId, itemId } = Astro.params;
         const prevItem = currentIndex > 0 ? course.course_items?.[currentIndex - 1] : null;
         const nextItem = currentIndex >= 0 && course.course_items ? course.course_items[currentIndex + 1] : null;
 
+        // Enforce order: if any previous item is not completed, don't show this item
+        const items = course.course_items ?? [];
+        const allPreviousCompleted = currentIndex <= 0 || items.slice(0, currentIndex).every((ci) => ci.completed);
+        if (!allPreviousCompleted) {
+          const firstIncomplete = items.find((ci) => !ci.completed);
+          if (content) {
+            content.innerHTML = `
+              <div class="bg-white rounded-xl p-8 text-center border border-gray-200">
+                <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">Complete previous items first</h2>
+                <p class="text-gray-600 mb-6">You need to complete the lessons and activities in order before accessing this one.</p>
+                <a href="/curso/${courseId}/item/${firstIncomplete?.id ?? items[0]?.id}" class="inline-flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] cursor-pointer">Go to next item</a>
+                <a href="/curso/${courseId}" class="block mt-3 text-[#2F7FBF] hover:underline">Back to course</a>
+              </div>
+            `;
+          }
+          return;
+        }
+
         if (courseItem.item_type === 'Lesson') {
-          // Try to fetch lesson content
-          // First check if this is the current item
-          let lesson: { id: number; title: string; content: string };
+          // Fetch lesson content; backend includes video in course_items, current_item, and single-lesson
+          const courseItemVideo = (courseItem as { video?: string }).video;
+          let lesson: { id: number; title: string; content: string; video?: string };
           let hasContent = false;
           
-          try {
-            const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
-            if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id) {
-              lesson = currentItemData.item;
-              hasContent = true;
-            } else {
-              // Not the current item, try to fetch lesson directly
-              try {
-                const lessonData = await get<{ id: number; title: string; content: string }>(`/lessons/${courseItem.item_id}`);
-                lesson = lessonData;
-                hasContent = true;
-              } catch {
-                // Fallback: use title from courseItem
-                lesson = {
-                  id: courseItem.item_id,
-                  title: courseItem.title,
-                  content: '',
-                };
-              }
-            }
-          } catch {
-            // Fallback: use title from courseItem
+          // Check if content is already in courseItem (from course show response)
+          if (courseItem.content && courseItem.content.trim().length > 0) {
             lesson = {
               id: courseItem.item_id,
               title: courseItem.title,
-              content: '',
+              content: courseItem.content,
+              video: courseItemVideo?.trim() || undefined,
             };
+            hasContent = true;
+          } else {
+            // Content not in courseItem, fetch from API
+            if (isCompleted) {
+              // Completed lesson: use course-specific endpoint
+              try {
+                const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
+                lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
+                hasContent = !!lessonData?.content;
+              } catch {
+                try {
+                  const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
+                  if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id && currentItemData.item?.content) {
+                    lesson = { ...currentItemData.item, video: currentItemData.item.video?.trim() || courseItemVideo?.trim() || undefined };
+                    hasContent = true;
+                  } else {
+                    lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
+                  }
+                } catch {
+                  lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
+                }
+              }
+            } else {
+              try {
+                const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
+                if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id) {
+                  lesson = { ...currentItemData.item, video: currentItemData.item.video?.trim() || courseItemVideo?.trim() || undefined };
+                  hasContent = true;
+                } else {
+                  try {
+                    const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
+                    lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
+                    hasContent = true;
+                  } catch {
+                    lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
+                  }
+                }
+              } catch {
+                try {
+                  const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
+                  lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
+                  hasContent = true;
+                } catch {
+                  lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
+                }
+              }
+            }
           }
 
+          const completedBadgeHtml = `
+            <span class="flex items-center gap-2 text-green-600 font-medium">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Completed
+            </span>
+          `;
           if (content) {
-            const prevIsLesson = prevItem?.item_type === 'Lesson';
-            const nextIsLesson = nextItem?.item_type === 'Lesson';
-            
             const navButtons = `
-              <div class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
+              <div id="lesson-nav" class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
                 ${prevItem ? `
-                  <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors">
+                  <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                    ${prevIsLesson ? 'Previous Lesson' : 'Previous'}
+                    Back
                   </a>
                 ` : '<div></div>'}
-                ${isCompleted ? `
-                  <span class="flex items-center gap-2 text-green-600 font-medium">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    Completed
-                  </span>
-                ` : `
-                  <button type="button" id="complete-lesson-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">
+                ${isCompleted ? completedBadgeHtml : `
+                  <button type="button" id="complete-lesson-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium cursor-pointer">
                     Mark as complete
                   </button>
                 `}
                 ${nextItem ? `
-                  <a href="/curso/${courseId}/item/${nextItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors">
-                    ${nextIsLesson ? 'Next Lesson' : 'Next'}
+                  <a href="/curso/${courseId}/item/${nextItem.id}" id="lesson-next-link" class="flex items-center gap-2 ${isCompleted ? 'bg-[#2F7FBF] text-white hover:bg-[#256A9E] cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'} px-4 py-2 rounded-lg font-medium transition-colors">
+                    Next
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   </a>
                 ` : '<div></div>'}
               </div>
             `;
 
-            const contentHtml = hasContent && lesson.content 
+            // Order: Title → Video → Content. Video: H5P iframe when URL present
+            const videoUrl = lesson.video?.trim();
+            const videoHtml = videoUrl
+              ? `<div class="mb-6 w-full max-w-4xl mx-auto"><iframe src="${escapeHtml(videoUrl)}" aria-label="${escapeHtml(lesson.title)}" width="100%" height="400" class="w-full rounded-lg" style="max-width: 1088px; aspect-ratio: 1088/637;" frameborder="0" allowfullscreen="allowfullscreen" allow="autoplay *; geolocation *; microphone *; camera *; midi *; encrypted-media *"></iframe></div>`
+              : '';
+
+            const hasActualContent = lesson.content && lesson.content.trim().length > 0;
+            const contentHtml = hasActualContent
               ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
-              : isCompleted 
-                ? `<p class="text-gray-600 italic">This lesson has been completed. You can review the content above.</p>`
-                : '';
+              : '';
+
+            const completedNote = isCompleted && !hasActualContent
+              ? `<p class="text-gray-600 italic mb-4">This lesson has been completed.</p>`
+              : '';
 
             content.innerHTML = `
               <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
                 <div class="p-6 lg:p-8">
                   <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">${escapeHtml(lesson.title)}</h2>
+                  ${videoHtml}
+                  ${completedNote}
                   ${contentHtml}
                   ${navButtons}
                 </div>
               </div>
             `;
+
+            if (videoUrl && content) {
+              const script = document.createElement('script');
+              script.src = 'https://lopezinsurance.h5p.com/js/h5p-resizer.js';
+              script.charset = 'UTF-8';
+              content.appendChild(script);
+            }
 
             if (!isCompleted) {
               document.getElementById('complete-lesson-btn')?.addEventListener('click', async () => {
@@ -164,18 +269,23 @@ const { courseId, itemId } = Astro.params;
                   btn.textContent = 'Saving...';
                 }
                 try {
-                  const res = await post<CompleteLessonResponse>(`/courses/${courseId}/complete_lesson`, {
+                  await post<CompleteLessonResponse>(`/courses/${courseId}/complete_lesson`, {
                     course_item_id: itemId,
                   });
-                  // Reload to show completed state
-                  loadItem();
+                  // Update UI in place: show Completed and enable Next (no navigation)
+                  btn.outerHTML = completedBadgeHtml;
+                  const nextLink = content?.querySelector('#lesson-next-link') as HTMLElement;
+                  if (nextLink) {
+                    nextLink.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+                    nextLink.classList.add('bg-[#2F7FBF]', 'text-white', 'hover:bg-[#256A9E]', 'cursor-pointer');
+                  }
                 } catch (e: unknown) {
                   const err = e as { body?: { error?: string; errors?: string[] } };
                   const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error';
                   showError(msg);
                   if (btn) {
                     btn.disabled = false;
-                    btn.textContent = 'Marcar como completada';
+                    btn.textContent = 'Mark as complete';
                   }
                 }
               });
@@ -192,6 +302,15 @@ const { courseId, itemId } = Astro.params;
         }
       } catch (e: unknown) {
         const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        if (err.status === 404) {
+          const content = document.getElementById('item-content');
+          const sidebar = document.getElementById('course-outline-sidebar');
+          if (content) content.innerHTML = `<div class="bg-white rounded-xl p-8 text-center"><p class="text-gray-600 mb-4">This course or item was not found or you don't have access to it.</p><a href="/cursos" class="inline-flex items-center gap-2 text-[#2F7FBF] hover:underline">← Back to my courses</a></div>`;
+          if (sidebar) sidebar.innerHTML = `<div class="p-4"><a href="/cursos" class="text-[#2F7FBF] hover:underline text-sm">← Back to my courses</a></div>`;
+          const errEl = document.getElementById('item-error');
+          if (errEl) errEl.classList.add('hidden');
+          return;
+        }
         const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error loading';
         showError(msg);
       }
@@ -235,12 +354,12 @@ const { courseId, itemId } = Astro.params;
           ${prevItem ? `
             <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Elemento anterior
+              Previous
             </a>
           ` : '<div></div>'}
           ${nextItem ? `
             <a href="/curso/${courseId}/item/${nextItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
-              Siguiente elemento
+              Next
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
           ` : '<div></div>'}
@@ -280,7 +399,7 @@ const { courseId, itemId } = Astro.params;
               ${prevItem ? `
                 <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] font-medium">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                  Elemento anterior
+                  Previous
                 </a>
               ` : '<div></div>'}
               <button type="submit" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">Submit answers</button>

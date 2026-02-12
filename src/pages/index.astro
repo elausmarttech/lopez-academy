@@ -55,17 +55,9 @@ import '../styles/index.css';
               </div>
             </div>
 
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-[#2F7FBF] focus:ring-[#2F7FBF]" />
-                <span class="text-sm text-gray-600">Remember me</span>
-              </label>
-              <a href="#" class="text-sm text-[#2F7FBF] hover:underline">Forgot your password?</a>
-            </div>
-
             <button
               type="submit"
-              class="w-full bg-[#2F7FBF] text-white py-3 rounded-lg hover:bg-[#256A9E] transition-colors font-medium"
+              class="w-full bg-[#2F7FBF] text-white py-3 rounded-lg hover:bg-[#256A9E] transition-colors font-medium cursor-pointer"
             >
               Sign in
             </button>
@@ -81,6 +73,14 @@ import '../styles/index.css';
     </div>
     <script>
       (function () {
+        // If already logged in, go to catalog instead of showing login (avoids confusion and backend bugs)
+        try {
+          if (typeof localStorage !== 'undefined' && localStorage.getItem('lopez_academy_jwt')) {
+            window.location.replace('/cursos');
+            return;
+          }
+        } catch (_) {}
+
         const form = document.getElementById('login-form') as HTMLFormElement;
         const errorEl = document.getElementById('login-error') as HTMLDivElement;
         if (!form) return;
@@ -96,8 +96,8 @@ import '../styles/index.css';
             errorEl.textContent = '';
           }
 
-          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:3000';
-          const res = await fetch(`${base}/users/sign_in.json`, {
+          const base = (import.meta as unknown as { env: { VITE_API_URL?: string } }).env?.VITE_API_URL?.replace(/\/$/, '') || 'https://lopez-university-db.onrender.com';
+          const res = await fetch(`${base}/users/sign_in`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ user: { email, password } }),

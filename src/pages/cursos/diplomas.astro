@@ -1,0 +1,104 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+<BaseLayout title="My diplomas - AprendePlus">
+  <div class="min-h-screen bg-[#F8F7F4]">
+    <section class="bg-[#FFF0CE] py-10">
+      <div class="max-w-4xl mx-auto px-6">
+        <h1 class="text-3xl font-bold text-[#2B2B2B] mb-2">My diplomas</h1>
+        <p class="text-gray-600">Certificates for courses you have completed</p>
+      </div>
+    </section>
+
+    <section class="py-12">
+      <div class="max-w-4xl mx-auto px-6">
+        <div id="diplomas-loading" class="text-center py-12 text-gray-500">Loading...</div>
+        <div id="diplomas-empty" class="hidden text-center py-16">
+          <div class="w-20 h-20 bg-[#EEEEEE] rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+          </div>
+          <h2 class="text-xl font-semibold text-[#2B2B2B] mb-2">No diplomas yet</h2>
+          <p class="text-gray-600 mb-6">Complete a course to earn your first certificate.</p>
+          <a href="/cursos" class="inline-flex items-center gap-2 bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Browse courses</a>
+        </div>
+        <div id="diplomas-error" class="hidden text-center py-12 text-red-600"></div>
+        <div id="diplomas-list" class="space-y-8">
+          <!-- Filled by client -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { get } from '@/lib/api';
+    import type { CourseListItem } from '@/lib/api-types';
+
+    const loadingEl = document.getElementById('diplomas-loading');
+    const emptyEl = document.getElementById('diplomas-empty');
+    const errorEl = document.getElementById('diplomas-error');
+    const listEl = document.getElementById('diplomas-list');
+
+    function escapeHtml(s: string): string {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function isCourseCompleted(course: CourseListItem): boolean {
+      const p = course.progress;
+      if (!p || p.total <= 0) return false;
+      return p.completed === p.total;
+    }
+
+    async function load() {
+      if (loadingEl) loadingEl.classList.remove('hidden');
+      if (emptyEl) emptyEl.classList.add('hidden');
+      if (errorEl) {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+      }
+      if (listEl) listEl.innerHTML = '';
+
+      try {
+        const courses = (await get<CourseListItem[]>('/courses')) ?? [];
+        const completed = courses.filter(isCourseCompleted);
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (completed.length === 0) {
+          if (emptyEl) emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        if (listEl) {
+          listEl.innerHTML = completed
+            .map(
+              (course) => `
+          <article class="diploma-card bg-white rounded-2xl border-2 border-[#E2BC73] shadow-lg overflow-hidden max-w-2xl mx-auto" data-course-id="${course.id}">
+            <div class="p-10 md:p-14 text-center">
+              <p class="text-sm font-semibold tracking-widest text-[#2F7FBF] uppercase mb-2">Certificate of Completion</p>
+              <div class="border-t border-b border-gray-200 py-6 my-6">
+                <h2 class="text-2xl md:text-3xl font-bold text-[#2B2B2B]">${escapeHtml(course.title)}</h2>
+              </div>
+              <p class="text-gray-700 mt-4">This is to certify that the participant has successfully completed the above course.</p>
+              <p class="text-sm text-gray-500 mt-8">Course completed</p>
+            </div>
+          </article>
+        `
+            )
+            .join('');
+        }
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string; errors?: string[] } };
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (errorEl) {
+          errorEl.textContent = err?.body && typeof err.body === 'object' && 'error' in err.body ? (err.body as { error: string }).error : 'Error loading diplomas';
+          errorEl.classList.remove('hidden');
+        }
+      }
+    }
+
+    load();
+  </script>
+</BaseLayout>
