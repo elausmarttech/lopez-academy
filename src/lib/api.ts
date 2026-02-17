@@ -4,6 +4,7 @@
 
 const TOKEN_KEY = 'lopez_academy_jwt';
 
+// Fallback when VITE_API_URL is not set (prod: https://lopez-university-db.onrender.com; local: http://127.0.0.1:3000)
 const DEFAULT_API_URL = 'https://lopez-university-db.onrender.com';
 
 function getBaseUrl(): string {

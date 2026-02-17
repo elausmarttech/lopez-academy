@@ -34,6 +34,8 @@ const { courseId, itemId } = Astro.params;
       CompleteLessonResponse,
       QuizDetail,
       QuizSubmitResponse,
+      LessonItem,
+      LessonSection,
     } from '@/lib/api-types';
 
     const root = document.getElementById('curso-item-detail-root');
@@ -136,65 +138,32 @@ const { courseId, itemId } = Astro.params;
         }
 
         if (courseItem.item_type === 'Lesson') {
-          // Fetch lesson content; backend includes video in course_items, current_item, and single-lesson
           const courseItemVideo = (courseItem as { video?: string }).video;
-          let lesson: { id: number; title: string; content: string; video?: string };
-          let hasContent = false;
-          
-          // Check if content is already in courseItem (from course show response)
-          if (courseItem.content && courseItem.content.trim().length > 0) {
+          const courseItemSections = (courseItem as { lesson_sections?: LessonSection[] }).lesson_sections;
+          let lesson: LessonItem;
+
+          try {
+            const lessonData = await get<LessonItem>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
             lesson = {
-              id: courseItem.item_id,
-              title: courseItem.title,
-              content: courseItem.content,
-              video: courseItemVideo?.trim() || undefined,
+              ...lessonData,
+              video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined,
+              lesson_sections: lessonData.lesson_sections ?? courseItemSections ?? [],
             };
-            hasContent = true;
-          } else {
-            // Content not in courseItem, fetch from API
-            if (isCompleted) {
-              // Completed lesson: use course-specific endpoint
-              try {
-                const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
-                lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
-                hasContent = !!lessonData?.content;
-              } catch {
-                try {
-                  const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
-                  if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id && currentItemData.item?.content) {
-                    lesson = { ...currentItemData.item, video: currentItemData.item.video?.trim() || courseItemVideo?.trim() || undefined };
-                    hasContent = true;
-                  } else {
-                    lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
-                  }
-                } catch {
-                  lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
-                }
+          } catch {
+            try {
+              const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
+              if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id) {
+                const item = currentItemData.item as LessonItem;
+                lesson = {
+                  ...item,
+                  video: item.video?.trim() || courseItemVideo?.trim() || undefined,
+                  lesson_sections: item.lesson_sections ?? courseItemSections ?? [],
+                };
+              } else {
+                lesson = { id: courseItem.item_id, title: courseItem.title, content: courseItem.content ?? '', video: courseItemVideo?.trim() || undefined, lesson_sections: courseItemSections ?? [] };
               }
-            } else {
-              try {
-                const currentItemData = await get<CurrentItemPayload>(`/courses/${courseId}/current_item`);
-                if ('item' in currentItemData && currentItemData.item_type === 'Lesson' && currentItemData.item_id === courseItem.item_id) {
-                  lesson = { ...currentItemData.item, video: currentItemData.item.video?.trim() || courseItemVideo?.trim() || undefined };
-                  hasContent = true;
-                } else {
-                  try {
-                    const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
-                    lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
-                    hasContent = true;
-                  } catch {
-                    lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
-                  }
-                }
-              } catch {
-                try {
-                  const lessonData = await get<{ id: number; title: string; content: string; video?: string }>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
-                  lesson = { ...lessonData, video: lessonData.video?.trim() || courseItemVideo?.trim() || undefined };
-                  hasContent = true;
-                } catch {
-                  lesson = { id: courseItem.item_id, title: courseItem.title, content: '', video: courseItemVideo?.trim() || undefined };
-                }
-              }
+            } catch {
+              lesson = { id: courseItem.item_id, title: courseItem.title, content: courseItem.content ?? '', video: courseItemVideo?.trim() || undefined, lesson_sections: courseItemSections ?? [] };
             }
           }
 
@@ -227,34 +196,58 @@ const { courseId, itemId } = Astro.params;
               </div>
             `;
 
-            // Order: Title → Video → Content. Video: H5P iframe when URL present
-            const videoUrl = lesson.video?.trim();
-            const videoHtml = videoUrl
-              ? `<div class="mb-6 w-full max-w-4xl mx-auto"><iframe src="${escapeHtml(videoUrl)}" aria-label="${escapeHtml(lesson.title)}" width="100%" height="400" class="w-full rounded-lg" style="max-width: 1088px; aspect-ratio: 1088/637;" frameborder="0" allowfullscreen="allowfullscreen" allow="autoplay *; geolocation *; microphone *; camera *; midi *; encrypted-media *"></iframe></div>`
-              : '';
+            const sections = (lesson.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            const useSections = sections.length > 0;
+            const lessonsOnly = (course.course_items ?? []).filter((ci) => ci.item_type === 'Lesson');
+            const lessonIndexAmongLessons = lessonsOnly.findIndex((ci) => ci.id === itemId);
+            const lessonNumber = lessonIndexAmongLessons >= 0 ? lessonIndexAmongLessons + 1 : 1;
 
-            const hasActualContent = lesson.content && lesson.content.trim().length > 0;
-            const contentHtml = hasActualContent
-              ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
-              : '';
+            function sectionVideoHtml(url: string | undefined, label: string): string {
+              if (!url?.trim()) return '';
+              return `<div class="mb-4 w-full max-w-4xl mx-auto"><iframe src="${escapeHtml(url.trim())}" aria-label="${escapeHtml(label)}" width="100%" height="400" class="w-full rounded-lg" style="max-width: 1088px; aspect-ratio: 1088/637;" frameborder="0" allowfullscreen="allowfullscreen" allow="autoplay *; geolocation *; microphone *; camera *; midi *; encrypted-media *"></iframe></div>`;
+            }
 
-            const completedNote = isCompleted && !hasActualContent
-              ? `<p class="text-gray-600 italic mb-4">This lesson has been completed.</p>`
-              : '';
+            let bodyHtml: string;
+            if (useSections) {
+              bodyHtml = sections
+                .map((sec, idx) => {
+                  const num = `${lessonNumber}.${idx + 1}`;
+                  const secVideo = sectionVideoHtml(sec.video, sec.title);
+                  const secContent = sec.content?.trim() ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700 mt-2">${escapeHtml(sec.content)}</div>` : '';
+                  return `
+                    <div class="mb-8 pb-6 border-b border-gray-200 last:border-0 last:pb-0">
+                      <h3 class="text-xl font-semibold text-[#2B2B2B] mb-2">${escapeHtml(num)} ${escapeHtml(sec.title)}</h3>
+                      ${secVideo}
+                      ${secContent}
+                    </div>
+                  `;
+                })
+                .join('');
+            } else {
+              const videoUrl = lesson.video?.trim();
+              const videoHtml = videoUrl
+                ? sectionVideoHtml(videoUrl, lesson.title)
+                : '';
+              const hasActualContent = lesson.content && lesson.content.trim().length > 0;
+              const contentHtml = hasActualContent
+                ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
+                : '';
+              const completedNote = isCompleted && !hasActualContent ? `<p class="text-gray-600 italic mb-4">This lesson has been completed.</p>` : '';
+              bodyHtml = `${videoHtml}${completedNote}${contentHtml}`;
+            }
 
             content.innerHTML = `
               <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
                 <div class="p-6 lg:p-8">
                   <h2 class="text-2xl font-bold text-[#2B2B2B] mb-4">${escapeHtml(lesson.title)}</h2>
-                  ${videoHtml}
-                  ${completedNote}
-                  ${contentHtml}
+                  ${bodyHtml}
                   ${navButtons}
                 </div>
               </div>
             `;
 
-            if (videoUrl && content) {
+            const hasAnyVideo = useSections ? sections.some((s) => s.video?.trim()) : !!lesson.video?.trim();
+            if (hasAnyVideo && content) {
               const script = document.createElement('script');
               script.src = 'https://lopezinsurance.h5p.com/js/h5p-resizer.js';
               script.charset = 'UTF-8';

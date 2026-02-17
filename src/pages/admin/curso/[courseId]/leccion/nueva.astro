@@ -23,11 +23,11 @@ const { courseId } = Astro.params;
           <label for="title" class="block text-sm font-medium text-[#2B2B2B] mb-2">Lesson title *</label>
           <input type="text" id="title" name="title" required placeholder="e.g. Introduction to the topic" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
         </div>
-        <div>
+        <div id="lesson-content-wrap">
           <label for="content" class="block text-sm font-medium text-[#2B2B2B] mb-2">Content</label>
           <textarea id="content" name="content" rows="6" placeholder="Lesson content..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]"></textarea>
         </div>
-        <div>
+        <div id="lesson-video-wrap">
           <label for="video-url" class="block text-sm font-medium text-[#2B2B2B] mb-2">Video URL (optional)</label>
           <input type="url" id="video-url" name="video-url" placeholder="https://example.com/video.mp4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF]" />
           <p class="mt-1 text-xs text-gray-500">Leave empty to use the default video URL</p>
@@ -37,6 +37,34 @@ const { courseId } = Astro.params;
           <button type="submit" class="px-6 py-3 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] font-medium cursor-pointer">Create and add to course</button>
         </div>
       </form>
+
+      <div id="sections-block" class="mt-8">
+        <h2 class="text-lg font-semibold text-[#2B2B2B] mb-2">Lesson sections (1.1, 1.2, …)</h2>
+        <p class="text-sm text-gray-600 mb-4">If you add sections, the lesson will show as a heading and each section will have its own title, video, and content. The lesson’s own content and video fields above will not be used.</p>
+        <div id="sections-list" class="space-y-3 mb-4"></div>
+        <button type="button" id="btn-add-section" class="px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] cursor-pointer text-sm font-medium">+ Add section</button>
+      </div>
+      <div id="section-form-wrap" class="hidden mt-6 p-4 border border-gray-200 rounded-xl bg-gray-50">
+        <h3 id="section-form-title" class="font-medium text-[#2B2B2B] mb-3">New section</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Title</label>
+            <input type="text" id="section-title" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Section title" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Content</label>
+            <textarea id="section-content" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Content (optional)"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Video URL (optional)</label>
+            <input type="url" id="section-video" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="https://..." />
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="section-save" class="px-4 py-2 bg-[#2F7FBF] text-white rounded-lg hover:bg-[#256A9E] text-sm cursor-pointer">Add section</button>
+            <button type="button" id="section-cancel" class="px-4 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </Layout>
@@ -53,13 +81,133 @@ const { courseId } = Astro.params;
   const courseTitleEl = document.getElementById('course-title');
   const form = document.getElementById('lesson-form') as HTMLFormElement;
   const errorEl = document.getElementById('form-error');
+  const lessonContentWrap = document.getElementById('lesson-content-wrap');
+  const lessonVideoWrap = document.getElementById('lesson-video-wrap');
+  const sectionsList = document.getElementById('sections-list');
+  const btnAddSection = document.getElementById('btn-add-section');
+  const sectionFormWrap = document.getElementById('section-form-wrap');
+  const sectionFormTitle = document.getElementById('section-form-title');
+  const sectionTitleInput = document.getElementById('section-title') as HTMLInputElement;
+  const sectionContentInput = document.getElementById('section-content') as HTMLTextAreaElement;
+  const sectionVideoInput = document.getElementById('section-video') as HTMLInputElement;
+  const sectionSaveBtn = document.getElementById('section-save');
+  const sectionCancelBtn = document.getElementById('section-cancel');
+
+  interface PendingSection {
+    title: string;
+    content: string;
+    video: string;
+  }
+  let pendingSections: PendingSection[] = [];
+  let editingSectionIndex: number | null = null;
 
   if (backLink) backLink.setAttribute('href', `/admin/curso/${courseId}/editar`);
   if (cancelLink) cancelLink.setAttribute('href', `/admin/curso/${courseId}/editar`);
 
+  function escapeHtml(s: string): string {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function setLessonFieldsVisibility(hide: boolean) {
+    if (lessonContentWrap) lessonContentWrap.style.display = hide ? 'none' : '';
+    if (lessonVideoWrap) lessonVideoWrap.style.display = hide ? 'none' : '';
+  }
+
+  function updateParentFieldsVisibility() {
+    // Hide parent content/video when user is adding sections (form open) or when there are pending sections
+    const sectionFormOpen = sectionFormWrap && !sectionFormWrap.classList.contains('hidden');
+    const hasSections = pendingSections.length > 0;
+    setLessonFieldsVisibility(hasSections || sectionFormOpen);
+  }
+
+  function renderSections() {
+    if (!sectionsList) return;
+    updateParentFieldsVisibility();
+    sectionsList.innerHTML = pendingSections
+      .map((sec, idx) => {
+        const num = `1.${idx + 1}`;
+        const title = sec.title?.trim() || 'Untitled';
+        return `
+          <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg section-row" data-index="${idx}">
+            <div>
+              <span class="font-medium text-[#2B2B2B]">${escapeHtml(num)} ${escapeHtml(title)}</span>
+              <span class="ml-2 text-xs text-amber-600">(not saved)</span>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="section-edit px-2 py-1 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded text-sm cursor-pointer" data-index="${idx}">Edit</button>
+              <button type="button" class="section-remove px-2 py-1 text-red-500 hover:bg-red-50 rounded text-sm cursor-pointer" data-index="${idx}">Remove</button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+    sectionsList.querySelectorAll('.section-edit').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt((btn as HTMLElement).dataset.index ?? '-1', 10);
+        if (idx < 0) return;
+        const sec = pendingSections[idx];
+        if (sec) {
+          editingSectionIndex = idx;
+          if (sectionFormTitle) sectionFormTitle.textContent = 'Edit section';
+          if (sectionTitleInput) sectionTitleInput.value = sec.title ?? '';
+          if (sectionContentInput) sectionContentInput.value = sec.content ?? '';
+          if (sectionVideoInput) sectionVideoInput.value = sec.video ?? '';
+          if (sectionFormWrap) sectionFormWrap.classList.remove('hidden');
+          if (sectionSaveBtn) sectionSaveBtn.textContent = 'Update section';
+        }
+      });
+    });
+    sectionsList.querySelectorAll('.section-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt((btn as HTMLElement).dataset.index ?? '-1', 10);
+        if (idx < 0) return;
+        pendingSections.splice(idx, 1);
+        renderSections();
+      });
+    });
+  }
+
   get<AdminCourse>(`/admin/courses/${courseId}`).then((c) => {
     if (courseTitleEl) courseTitleEl.textContent = c.title ?? '';
   }).catch(() => {});
+
+  btnAddSection?.addEventListener('click', () => {
+    editingSectionIndex = null;
+    if (sectionFormTitle) sectionFormTitle.textContent = 'New section';
+    if (sectionTitleInput) sectionTitleInput.value = '';
+    if (sectionContentInput) sectionContentInput.value = '';
+    if (sectionVideoInput) sectionVideoInput.value = '';
+    if (sectionFormWrap) sectionFormWrap.classList.remove('hidden');
+    if (sectionSaveBtn) sectionSaveBtn.textContent = 'Add section';
+    updateParentFieldsVisibility(); // Hide parent content/video as soon as user chooses to add a section
+  });
+
+  sectionCancelBtn?.addEventListener('click', () => {
+    editingSectionIndex = null;
+    if (sectionFormWrap) sectionFormWrap.classList.add('hidden');
+    updateParentFieldsVisibility(); // Show parent fields again if no sections were added
+  });
+
+  sectionSaveBtn?.addEventListener('click', () => {
+    const title = sectionTitleInput?.value?.trim() ?? '';
+    const content = sectionContentInput?.value?.trim() ?? '';
+    const video = sectionVideoInput?.value?.trim() ?? '';
+    const sec: PendingSection = { title: title || 'New section', content, video };
+    if (editingSectionIndex != null) {
+      pendingSections[editingSectionIndex] = sec;
+      editingSectionIndex = null;
+      if (sectionSaveBtn) sectionSaveBtn.textContent = 'Add section';
+    } else {
+      pendingSections.push(sec);
+    }
+    if (sectionFormWrap) sectionFormWrap.classList.add('hidden');
+    renderSections();
+  });
+
+  // When the lesson has sections, parent content/video are hidden; we still send placeholders so the backend always receives content.
+  const PARENT_PLACEHOLDER_CONTENT = '—';
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -68,20 +216,34 @@ const { courseId } = Astro.params;
     const content = (form.querySelector('#content') as HTMLTextAreaElement)?.value?.trim() ?? '';
     const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() || undefined;
     if (!title) return;
+    const hasSections = pendingSections.length > 0;
     try {
-      const lessonPayload: { title: string; content: string; video_url?: string } = { title, content };
-      if (videoUrl) lessonPayload.video_url = videoUrl;
+      const lessonPayload: { title: string; content: string; video_url?: string } = {
+        title,
+        content: hasSections ? PARENT_PLACEHOLDER_CONTENT : (content || PARENT_PLACEHOLDER_CONTENT),
+      };
+      if (hasSections) {
+        lessonPayload.video_url = ''; // placeholder so backend always has the field when it expects it
+      } else if (videoUrl) {
+        lessonPayload.video_url = videoUrl;
+      }
       const lesson = await post<AdminLesson>(`/admin/courses/${courseId}/lessons`, { lesson: lessonPayload });
-      
-      // Get course items to determine the last position
+
+      for (let i = 0; i < pendingSections.length; i++) {
+        const sec = pendingSections[i];
+        await post(`/admin/courses/${courseId}/lessons/${lesson.id}/lesson_sections`, {
+          lesson_section: { position: i, title: sec.title || 'Section', content: sec.content || '', video: sec.video || undefined },
+        });
+      }
+
       const raw = await get<AdminCourseWithItems | { course: AdminCourseWithItems }>(`/admin/courses/${courseId}`);
       const course = (raw as { course?: AdminCourseWithItems }).course ?? (raw as AdminCourseWithItems);
       const courseItems = course?.course_items ?? [];
-      const maxPosition = courseItems.length > 0 
-        ? Math.max(...courseItems.map(item => item.position ?? 0))
+      const maxPosition = courseItems.length > 0
+        ? Math.max(...courseItems.map((item) => item.position ?? 0))
         : -1;
       const newPosition = maxPosition + 1;
-      
+
       await post(`/admin/courses/${courseId}/course_items`, {
         course_item: { item_type: 'Lesson', item_id: lesson.id, position: newPosition },
       });
@@ -89,7 +251,7 @@ const { courseId } = Astro.params;
     } catch (err: unknown) {
       const apiErr = err as { body?: { error?: string; errors?: string[] } };
       if (errorEl) {
-        errorEl.textContent = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors[0]) || 'Error creating lesson';
+        errorEl.textContent = apiErr?.body?.error || (Array.isArray(apiErr?.body?.errors) && apiErr.body.errors?.[0]) || 'Error creating lesson';
         errorEl.classList.remove('hidden');
       }
     }

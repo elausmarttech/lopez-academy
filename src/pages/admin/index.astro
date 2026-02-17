@@ -30,11 +30,14 @@ export const prerender = false;
             <tr>
               <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Course</th>
               <th class="text-left px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Description</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Lessons</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Quizzes</th>
+              <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Students</th>
               <th class="text-center px-6 py-4 text-sm font-semibold text-[#2B2B2B]">Actions</th>
             </tr>
           </thead>
           <tbody id="admin-tbody" class="divide-y divide-gray-200">
-            <tr><td colspan="3" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+            <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -80,11 +83,17 @@ export const prerender = false;
         <td class="px-6 py-4">
           <p class="font-medium text-[#2B2B2B]">${escapeHtml(c.title)}</p>
         </td>
-        <td class="px-6 py-4 text-sm text-gray-600 line-clamp-2">${escapeHtml((c.description || '').slice(0, 100))}${(c.description || '').length > 100 ? '…' : ''}</td>
+        <td class="px-6 py-4 text-sm text-gray-600 max-w-[280px]" title="${escapeHtml(c.description || '')}"><div class="line-clamp-2 overflow-hidden" style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; word-break: normal;">${escapeHtml(c.description || '')}</div></td>
+        <td class="px-6 py-4 text-center text-sm text-gray-700">${c.lessons_count != null ? c.lessons_count : '—'}</td>
+        <td class="px-6 py-4 text-center text-sm text-gray-700">${c.quizzes_count != null ? c.quizzes_count : '—'}</td>
+        <td class="px-6 py-4 text-center text-sm text-gray-700">${c.students_count != null ? c.students_count : '—'}</td>
         <td class="px-6 py-4">
           <div class="flex items-center justify-center gap-2">
+            <a href="/curso/${c.id}" class="p-2 text-gray-600 hover:bg-[#FFF0CE] rounded-lg transition-colors" title="View and start course">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </a>
             <a href="/admin/curso/${c.id}/editar" class="p-2 text-[#2F7FBF] hover:bg-[#FFF0CE] rounded-lg transition-colors" title="Edit">✏️</a>
-            <button type="button" class="admin-delete p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" data-id="${c.id}" title="Delete">🗑</button>
+            <button type="button" class="admin-delete p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer" data-id="${c.id}" title="Delete">🗑</button>
           </div>
         </td>
       </tr>
@@ -121,7 +130,7 @@ export const prerender = false;
         return;
       }
       showError(err?.body?.error || 'Error loading courses');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-8 text-center text-red-600">Error loading</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-red-600">Error loading</td></tr>';
     }
   }
 

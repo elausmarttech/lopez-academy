@@ -32,6 +32,8 @@ export interface CourseItemRef {
   completed: boolean;
   content?: string; // Lesson content (for lessons only, included in course show response)
   video?: string; // Lesson video URL (when item_type is Lesson)
+  /** When item_type is Lesson: sub-parts 1.1, 1.2, … (from GET /courses/:id, current_item, or GET lessons/:id) */
+  lesson_sections?: LessonSection[];
 }
 
 export interface CourseDetail {
@@ -48,11 +50,22 @@ export interface CourseDetail {
   } | null;
 }
 
+/** Section within a lesson (1.1, 1.2, …). Used when lesson_sections.length > 0. */
+export interface LessonSection {
+  id: number;
+  position: number;
+  title: string;
+  content: string;
+  video?: string;
+}
+
 export interface LessonItem {
   id: number;
   title: string;
   content: string;
   video?: string; // Video URL (e.g. H5P embed)
+  /** Sub-parts 1.1, 1.2, …; empty or missing = single block (lesson title, video, content only) */
+  lesson_sections?: LessonSection[];
 }
 
 export interface QuizItemRef {
@@ -136,6 +149,12 @@ export interface AdminCourse {
   default?: boolean;
   created_at: string;
   updated_at: string;
+  /** Number of lessons (when returned by list endpoint) */
+  lessons_count?: number;
+  /** Number of quizzes (when returned by list endpoint) */
+  quizzes_count?: number;
+  /** Number of students enrolled/assigned to this course (when returned by list endpoint) */
+  students_count?: number;
 }
 
 export interface AdminCourseWithItems extends AdminCourse {
@@ -150,12 +169,25 @@ export interface AdminCourseItem {
   item: { title: string; type: string };
 }
 
+/** Admin API: section of a lesson (1.1, 1.2, …) */
+export interface AdminLessonSection {
+  id: number;
+  lesson_id: number;
+  position: number;
+  title: string;
+  content: string;
+  video?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AdminLesson {
   id: number;
   title: string;
   content: string;
   video_url?: string;
   position?: number;
+  lesson_sections?: AdminLessonSection[];
 }
 
 export interface AdminQuiz {
