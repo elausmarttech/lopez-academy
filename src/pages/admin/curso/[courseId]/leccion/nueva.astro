@@ -214,19 +214,15 @@ const { courseId } = Astro.params;
     if (errorEl) errorEl.classList.add('hidden');
     const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
     const content = (form.querySelector('#content') as HTMLTextAreaElement)?.value?.trim() ?? '';
-    const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() || undefined;
+    const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() ?? '';
     if (!title) return;
     const hasSections = pendingSections.length > 0;
     try {
-      const lessonPayload: { title: string; content: string; video_url?: string } = {
+      const lessonPayload: { title: string; content: string; video: string } = {
         title,
         content: hasSections ? PARENT_PLACEHOLDER_CONTENT : (content || PARENT_PLACEHOLDER_CONTENT),
+        video: hasSections ? '' : videoUrl,
       };
-      if (hasSections) {
-        lessonPayload.video_url = ''; // placeholder so backend always has the field when it expects it
-      } else if (videoUrl) {
-        lessonPayload.video_url = videoUrl;
-      }
       const lesson = await post<AdminLesson>(`/admin/courses/${courseId}/lessons`, { lesson: lessonPayload });
 
       for (let i = 0; i < pendingSections.length; i++) {

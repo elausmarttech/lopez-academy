@@ -112,10 +112,19 @@ import '../styles/index.css';
               } catch (_) {}
             }
             const baseUrl = base;
-            const check = await fetch(`${baseUrl}/admin/courses`, {
-              headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-            });
-            window.location.href = check.ok ? '/admin' : '/cursos';
+            let isAdmin = false;
+            try {
+              const meRes = await fetch(`${baseUrl}/users/me`, {
+                headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+              });
+              if (meRes.ok) {
+                const data = await meRes.json();
+                const user = data?.user ?? data;
+                const r = user?.role;
+                isAdmin = r === 1 || r === '1' || (typeof r === 'string' && r.toLowerCase() === 'admin');
+              }
+            } catch (_) {}
+            window.location.href = isAdmin ? '/admin' : '/cursos';
             return;
           }
 

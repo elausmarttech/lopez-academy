@@ -21,6 +21,7 @@ export interface CourseListItem {
   description: string;
   default?: boolean;
   progress?: { completed: number; total: number };
+  header_image_url?: string | null;
 }
 
 export interface CourseItemRef {
@@ -34,6 +35,8 @@ export interface CourseItemRef {
   video?: string; // Lesson video URL (when item_type is Lesson)
   /** When item_type is Lesson: sub-parts 1.1, 1.2, … (from GET /courses/:id, current_item, or GET lessons/:id) */
   lesson_sections?: LessonSection[];
+  /** When item_type is Lesson and has sections: lesson_section ids the current user has completed (from backend) */
+  completed_section_ids?: number[];
 }
 
 export interface CourseDetail {
@@ -41,6 +44,7 @@ export interface CourseDetail {
   title: string;
   description: string;
   default?: boolean;
+  header_image_url?: string | null;
   course_items: CourseItemRef[];
   next_item: {
     id: number;
@@ -110,10 +114,21 @@ export interface QuizDetail {
   id: number;
   title: string;
   questions: QuizQuestion[];
+  /** When quiz is completed, GET /quizzes/:id may include this for green/red review. */
+  question_results?: QuizQuestionResult[];
 }
 
 export interface QuizSubmitPayload {
   answers: Record<string, string>;
+}
+
+/** Per-question result from POST /quizzes/:id/submit or GET /quizzes/:id (when completed). */
+export interface QuizQuestionResult {
+  question_id: number;
+  correct: boolean;
+  correct_answer: string;
+  /** Set when from GET /quizzes/:id so frontend can show which option the user chose. */
+  user_answer?: string;
 }
 
 export interface QuizSubmitResponse {
@@ -122,6 +137,8 @@ export interface QuizSubmitResponse {
   message: string;
   next_item: { id: number; item_type: string; item_id: number; title: string } | null;
   course_complete: boolean;
+  /** When present, frontend can show correct/incorrect highlighting per question. */
+  question_results?: QuizQuestionResult[];
 }
 
 export interface CompleteLessonResponse {
@@ -130,7 +147,26 @@ export interface CompleteLessonResponse {
   course_complete: boolean;
 }
 
+/** Response from POST /courses/:course_id/complete_lesson_section */
+export interface CompleteLessonSectionResponse {
+  /** Next section in the same lesson, or null if lesson complete or no more sections */
+  next_section: { id: number; position: number; title: string } | null;
+  /** True when the lesson was just finished (all sections completed) */
+  lesson_complete: boolean;
+  /** Next course item when lesson_complete (or when no sections); null if course complete */
+  next_item: { id: number; item_type: string; item_id: number; title: string } | null;
+  course_complete: boolean;
+}
+
 // --- Admin API ---
+
+/** Option from GET /admin/course-header-images for course card/header image selector. */
+export interface CourseHeaderImageOption {
+  id: number;
+  google_drive_file_id?: string;
+  label: string;
+  url: string;
+}
 
 export interface AdminUser {
   id: number;
@@ -155,6 +191,8 @@ export interface AdminCourse {
   quizzes_count?: number;
   /** Number of students enrolled/assigned to this course (when returned by list endpoint) */
   students_count?: number;
+  header_image_id?: number | null;
+  header_image_url?: string | null;
 }
 
 export interface AdminCourseWithItems extends AdminCourse {

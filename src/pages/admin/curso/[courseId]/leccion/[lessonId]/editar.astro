@@ -205,12 +205,13 @@ const { courseId, lessonId } = Astro.params;
       const lesson = await get<AdminLesson>(`/admin/courses/${courseId}/lessons/${lessonId}`);
       originalTitle = lesson.title?.trim() ?? '';
       originalContent = lesson.content?.trim() ?? '';
-      originalVideoUrl = lesson.video_url?.trim() ?? '';
+      const lessonVideo = (lesson as { video?: string }).video ?? lesson.video_url;
+      originalVideoUrl = lessonVideo?.trim() ?? '';
       sections = lesson.lesson_sections ?? [];
       if (pageTitle) pageTitle.textContent = `Edit: ${lesson.title}`;
       (form.querySelector('#title') as HTMLInputElement).value = lesson.title ?? '';
       (form.querySelector('#content') as HTMLTextAreaElement).value = lesson.content ?? '';
-      (form.querySelector('#video-url') as HTMLInputElement).value = lesson.video_url ?? '';
+      (form.querySelector('#video-url') as HTMLInputElement).value = lessonVideo ?? '';
       if (formLoading) formLoading.classList.add('hidden');
       if (form) form.classList.remove('hidden');
       if (sectionsBlock) {
@@ -242,11 +243,10 @@ const { courseId, lessonId } = Astro.params;
     if (errorEl) errorEl.classList.add('hidden');
     const title = (form.querySelector('#title') as HTMLInputElement)?.value?.trim();
     const content = (form.querySelector('#content') as HTMLTextAreaElement)?.value?.trim() ?? '';
-    const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() || undefined;
+    const videoUrl = (form.querySelector('#video-url') as HTMLInputElement)?.value?.trim() ?? '';
     if (!title) return;
     try {
-      const lessonPayload: { title: string; content: string; video_url?: string } = { title, content };
-      if (videoUrl) lessonPayload.video_url = videoUrl;
+      const lessonPayload: { title: string; content: string; video: string } = { title, content, video: videoUrl };
       await patch(`/admin/courses/${courseId}/lessons/${lessonId}`, { lesson: lessonPayload });
       window.location.href = `/admin/curso/${courseId}/editar`;
     } catch (err: unknown) {

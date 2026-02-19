@@ -58,15 +58,26 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
     const errorEl = document.getElementById('error');
     const search = document.getElementById('search') as HTMLInputElement;
 
+    // Google Drive "uc?export=view" URLs often don't work in <img>. Use thumbnail endpoint when we can extract the file id.
+    function imageSrcForHeaderUrl(url: string | null | undefined): string | null {
+      if (!url) return null;
+      const decoded = url.replace(/&amp;/g, '&');
+      const m = decoded.match(/[?&]id=([^&]+)/);
+      if (m) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w400`;
+      return decoded;
+    }
+
     function renderCards(courses: CourseListItem[]) {
       if (!grid) return;
       grid.innerHTML = courses
         .map(
-          (c) => `
+          (c) => {
+            const imgSrc = imageSrcForHeaderUrl(c.header_image_url);
+            return `
         <a href="/curso/${c.id}" class="group course-card block" data-title="${(c.title || '').toLowerCase()}" data-description="${(c.description || '').toLowerCase()}">
           <div class="bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
             <div class="relative h-48 overflow-hidden bg-[#EEEEEE] flex items-center justify-center">
-              <span class="text-4xl text-gray-400">📚</span>
+              ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" class="w-full h-48 object-cover transition-transform duration-300 ease-out group-hover:scale-105" referrerpolicy="no-referrer" />` : '<span class="text-4xl text-gray-400">📚</span>'}
             </div>
             <div class="p-5 flex-1 flex flex-col">
               <h3 class="font-semibold text-[#2B2B2B] mb-2 group-hover:text-[#2F7FBF] transition-colors line-clamp-2">${escapeHtml(c.title)}</h3>
@@ -75,7 +86,8 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
             </div>
           </div>
         </a>
-      `
+      `;
+          }
         )
         .join('');
       updateFilter();

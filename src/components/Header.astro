@@ -91,33 +91,38 @@ const logoHref = currentPath.startsWith('/admin') || currentPath === '/configura
     </div>
   </div>
   <script>
-    import { request, get } from '@/lib/api';
+    import { get } from '@/lib/api';
     import type { CurrentUser } from '@/lib/api-types';
+    function isAdmin(user: CurrentUser): boolean {
+      const r = user.role;
+      return r === 1 || r === '1' || (typeof r === 'string' && r.toLowerCase() === 'admin');
+    }
     (async function () {
-      const adminLink = document.getElementById('admin-link');
-      if (adminLink) {
-        try {
-          await request('/admin/courses', { skipForbiddenRedirect: true });
-          adminLink.classList.remove('hidden');
-        } catch {
-          adminLink.classList.add('hidden');
-        }
-      }
+      let currentUser: CurrentUser | null = null;
       const greetingEl = document.getElementById('profile-greeting');
-      if (greetingEl) {
-        const endpoints = ['/users/me', '/profile', '/users/current'];
-        for (const path of endpoints) {
-          try {
-            const data = await get<unknown>(path);
-            const wrapped = data && typeof data === 'object' && 'user' in data ? (data as { user: CurrentUser }).user : (data as CurrentUser);
-            if (wrapped && (wrapped.id != null || wrapped.email)) {
+      const endpoints = ['/users/me', '/profile', '/users/current'];
+      for (const path of endpoints) {
+        try {
+          const data = await get<unknown>(path);
+          const wrapped = data && typeof data === 'object' && 'user' in data ? (data as { user: CurrentUser }).user : (data as CurrentUser);
+          if (wrapped && (wrapped.id != null || wrapped.email)) {
+            currentUser = wrapped;
+            if (greetingEl) {
               const name = wrapped.first_name?.trim() || wrapped.email?.trim() || 'Guest';
               greetingEl.textContent = `Hello! ${name}`;
-              break;
             }
-          } catch {
-            continue;
+            break;
           }
+        } catch {
+          continue;
+        }
+      }
+      const adminLink = document.getElementById('admin-link');
+      if (adminLink) {
+        if (currentUser && isAdmin(currentUser)) {
+          adminLink.classList.remove('hidden');
+        } else {
+          adminLink.classList.add('hidden');
         }
       }
     })();

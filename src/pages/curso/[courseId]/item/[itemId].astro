@@ -30,9 +30,11 @@ const { courseId, itemId } = Astro.params;
     import { get, post } from '@/lib/api';
     import type {
       CourseDetail,
+      CourseItemRef,
       CurrentItemPayload,
       CompleteLessonResponse,
       QuizDetail,
+      QuizQuestionResult,
       QuizSubmitResponse,
       LessonItem,
       LessonSection,
@@ -59,7 +61,11 @@ const { courseId, itemId } = Astro.params;
       }
     }
 
-    function renderSidebar(course: CourseDetail, currentItemId: number | null) {
+    function renderSidebarWithSections(
+      course: CourseDetail,
+      currentItemId: number | null,
+      currentSectionIndex: number | null
+    ) {
       const titleEl = document.getElementById('sidebar-course-title');
       const outlineEl = document.getElementById('sidebar-outline');
       if (titleEl) titleEl.textContent = course.title ?? 'Course';
@@ -68,29 +74,118 @@ const { courseId, itemId } = Astro.params;
         return;
       }
       const nextId = course.next_item?.id ?? null;
-      outlineEl.innerHTML = course.course_items
-        .map((item, i) => {
+      const lessonsOnly = course.course_items.filter((ci) => ci.item_type === 'Lesson');
+      let globalIdx = 0;
+      const parts: string[] = [];
+      for (let i = 0; i < course.course_items.length; i++) {
+        const item = course.course_items[i];
+        const isQuiz = item.item_type === 'Quiz';
+        const isLessonWithSections = !isQuiz && (item.lesson_sections?.length ?? 0) > 0;
+        const completedSectionIds = (item as CourseItemRef).completed_section_ids ?? [];
+        const isCurrentItem = item.id === currentItemId;
+
+        if (isQuiz) {
+          globalIdx++;
           const isCompleted = item.completed;
-          const isCurrent = item.id === currentItemId;
           const isNext = item.id === nextId;
           const isLocked = !isCompleted && !isNext;
           const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
-          const linkClass = isCurrent
+          const linkClass = isCurrentItem && currentSectionIndex === null
             ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
             : isLocked
               ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
               : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
-          const icon = item.item_type === 'Quiz'
-            ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>'
-            : '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const icon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>';
           const badge = isCompleted
             ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
-            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${i + 1}</span>`;
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${globalIdx}</span>`;
           const tag = isLocked ? 'div' : 'a';
           const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
-          return `<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`;
-        })
-        .join('');
+          parts.push(`<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`);
+        } else if (isLessonWithSections) {
+          const sections = (item.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+          const lessonNum = lessonsOnly.findIndex((ci) => ci.id === item.id) + 1;
+          const parentCompleted = item.completed;
+          const parentIsNext = item.id === nextId;
+          const parentLocked = !parentCompleted && !parentIsNext;
+          const parentHref = parentLocked ? '#' : `/curso/${courseId}/item/${item.id}/section/0`;
+          const expandedByDefault = isCurrentItem && currentSectionIndex !== null;
+          const parentLinkClass = parentLocked
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed flex-1 min-w-0'
+            : isCurrentItem
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer flex-1 min-w-0'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer flex-1 min-w-0';
+          const parentBadge = parentCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${lessonNum}</span>`;
+          const bookIcon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const chevronSvg = expandedByDefault ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>';
+          const chevronBtn = `<button type="button" class="sidebar-chevron-toggle flex-shrink-0 p-1 rounded hover:bg-gray-100 cursor-pointer" aria-label="${expandedByDefault ? 'Collapse sections' : 'Expand sections'}"><svg class="w-4 h-4 text-[#2B2B2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">${chevronSvg}</svg></button>`;
+          const parentTag = parentLocked ? 'div' : 'a';
+          const parentAttrs = parentLocked ? '' : ` href="${escapeHtml(parentHref)}"`;
+          parts.push(`<div class="sidebar-lesson-sections" data-lesson-item-id="${item.id}" data-expanded="${expandedByDefault}"><div class="flex items-center gap-1 rounded-lg ${isCurrentItem ? 'bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF]' : ''}"><${parentTag} class="${parentLinkClass}"${parentAttrs}>${bookIcon}<span class="flex-shrink-0 w-5 h-5 flex items-center justify-center">${parentBadge}</span><span class="truncate">${escapeHtml(item.title)}</span></${parentTag}>${chevronBtn}</div><div class="sidebar-section-rows" style="${expandedByDefault ? '' : 'display:none'}">`);
+          for (let s = 0; s < sections.length; s++) {
+            const sec = sections[s];
+            const secCompleted = completedSectionIds.includes(sec.id);
+            const prevSectionsComplete = s === 0 || sections.slice(0, s).every((prev) => completedSectionIds.includes(prev.id));
+            const isLocked = parentLocked || !secCompleted && !prevSectionsComplete;
+            const secHref = isLocked ? '#' : `/curso/${courseId}/item/${item.id}/section/${s}`;
+            const isCurrent = isCurrentItem && currentSectionIndex === s;
+            const secLinkClass = isCurrent
+              ? 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+              : isLocked
+                ? 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+                : 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+            const secBadge = secCompleted
+              ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+              : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${lessonNum}.${s + 1}</span>`;
+            const secTag = isLocked ? 'div' : 'a';
+            const secAttrs = isLocked ? '' : ` href="${escapeHtml(secHref)}"`;
+            parts.push(`<${secTag} class="${secLinkClass}"${secAttrs}>${secBadge}<span class="truncate">${escapeHtml(sec.title)}</span></${secTag}>`);
+          }
+          parts.push('</div></div>');
+          globalIdx++;
+        } else {
+          globalIdx++;
+          const isCompleted = item.completed;
+          const isNext = item.id === nextId;
+          const isLocked = !isCompleted && !isNext;
+          const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
+          const linkClass = isCurrentItem && currentSectionIndex === null
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+            : isLocked
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+          const icon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const badge = isCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${globalIdx}</span>`;
+          const tag = isLocked ? 'div' : 'a';
+          const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
+          parts.push(`<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`);
+        }
+      }
+      outlineEl.innerHTML = parts.join('');
+      outlineEl.querySelectorAll('.sidebar-chevron-toggle').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const wrapper = (e.currentTarget as HTMLElement).closest('.sidebar-lesson-sections');
+          if (!wrapper) return;
+          const sectionRows = wrapper.querySelector('.sidebar-section-rows') as HTMLElement;
+          const isExpanded = wrapper.getAttribute('data-expanded') === 'true';
+          wrapper.setAttribute('data-expanded', String(!isExpanded));
+          if (sectionRows) sectionRows.style.display = isExpanded ? 'none' : '';
+          const target = e.currentTarget as HTMLElement;
+          const svg = target.querySelector('svg');
+          if (svg) {
+            svg.innerHTML = isExpanded
+              ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>'
+              : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>';
+          }
+          target.setAttribute('aria-label', isExpanded ? 'Expand sections' : 'Collapse sections');
+        });
+      });
     }
 
     async function loadItem(): Promise<void> {
@@ -106,7 +201,7 @@ const { courseId, itemId } = Astro.params;
       try {
         // Get course detail to find the item and check completion status
         const course = await get<CourseDetail>(`/courses/${courseId}`);
-        renderSidebar(course, itemId);
+        renderSidebarWithSections(course, itemId, null);
         const courseItem = course.course_items?.find((item) => item.id === itemId);
         
         if (!courseItem) {
@@ -173,11 +268,21 @@ const { courseId, itemId } = Astro.params;
               Completed
             </span>
           `;
+          const prevHref = prevItem
+            ? (prevItem.item_type === 'Lesson' && (prevItem.lesson_sections?.length ?? 0) > 0)
+              ? `/curso/${courseId}/item/${prevItem.id}/section/${(prevItem.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).length - 1}`
+              : `/curso/${courseId}/item/${prevItem.id}`
+            : '';
+          const nextHref = nextItem
+            ? (nextItem.item_type === 'Lesson' && (nextItem.lesson_sections?.length ?? 0) > 0)
+              ? `/curso/${courseId}/item/${nextItem.id}/section/0`
+              : `/curso/${courseId}/item/${nextItem.id}`
+            : '';
           if (content) {
             const navButtons = `
               <div id="lesson-nav" class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
                 ${prevItem ? `
-                  <a href="/curso/${courseId}/item/${prevItem.id}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors cursor-pointer">
+                  <a href="${escapeHtml(prevHref)}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     Back
                   </a>
@@ -188,7 +293,7 @@ const { courseId, itemId } = Astro.params;
                   </button>
                 `}
                 ${nextItem ? `
-                  <a href="/curso/${courseId}/item/${nextItem.id}" id="lesson-next-link" class="flex items-center gap-2 ${isCompleted ? 'bg-[#2F7FBF] text-white hover:bg-[#256A9E] cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'} px-4 py-2 rounded-lg font-medium transition-colors">
+                  <a href="${escapeHtml(nextHref)}" id="lesson-next-link" class="flex items-center gap-2 ${isCompleted ? 'bg-[#2F7FBF] text-white hover:bg-[#256A9E] cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'} px-4 py-2 rounded-lg font-medium transition-colors">
                     Next
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                   </a>
@@ -198,6 +303,10 @@ const { courseId, itemId } = Astro.params;
 
             const sections = (lesson.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
             const useSections = sections.length > 0;
+            if (useSections) {
+              window.location.replace(`/curso/${courseId}/item/${itemId}/section/0`);
+              return;
+            }
             const lessonsOnly = (course.course_items ?? []).filter((ci) => ci.item_type === 'Lesson');
             const lessonIndexAmongLessons = lessonsOnly.findIndex((ci) => ci.id === itemId);
             const lessonNumber = lessonIndexAmongLessons >= 0 ? lessonIndexAmongLessons + 1 : 1;
@@ -207,34 +316,16 @@ const { courseId, itemId } = Astro.params;
               return `<div class="mb-4 w-full max-w-4xl mx-auto"><iframe src="${escapeHtml(url.trim())}" aria-label="${escapeHtml(label)}" width="100%" height="400" class="w-full rounded-lg" style="max-width: 1088px; aspect-ratio: 1088/637;" frameborder="0" allowfullscreen="allowfullscreen" allow="autoplay *; geolocation *; microphone *; camera *; midi *; encrypted-media *"></iframe></div>`;
             }
 
-            let bodyHtml: string;
-            if (useSections) {
-              bodyHtml = sections
-                .map((sec, idx) => {
-                  const num = `${lessonNumber}.${idx + 1}`;
-                  const secVideo = sectionVideoHtml(sec.video, sec.title);
-                  const secContent = sec.content?.trim() ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700 mt-2">${escapeHtml(sec.content)}</div>` : '';
-                  return `
-                    <div class="mb-8 pb-6 border-b border-gray-200 last:border-0 last:pb-0">
-                      <h3 class="text-xl font-semibold text-[#2B2B2B] mb-2">${escapeHtml(num)} ${escapeHtml(sec.title)}</h3>
-                      ${secVideo}
-                      ${secContent}
-                    </div>
-                  `;
-                })
-                .join('');
-            } else {
-              const videoUrl = lesson.video?.trim();
-              const videoHtml = videoUrl
-                ? sectionVideoHtml(videoUrl, lesson.title)
-                : '';
-              const hasActualContent = lesson.content && lesson.content.trim().length > 0;
-              const contentHtml = hasActualContent
-                ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
-                : '';
-              const completedNote = isCompleted && !hasActualContent ? `<p class="text-gray-600 italic mb-4">This lesson has been completed.</p>` : '';
-              bodyHtml = `${videoHtml}${completedNote}${contentHtml}`;
-            }
+            const videoUrl = lesson.video?.trim();
+            const videoHtml = videoUrl
+              ? sectionVideoHtml(videoUrl, lesson.title)
+              : '';
+            const hasActualContent = lesson.content && lesson.content.trim().length > 0;
+            const contentHtml = hasActualContent
+              ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700">${escapeHtml(lesson.content)}</div>`
+              : '';
+            const completedNote = isCompleted && !hasActualContent ? `<p class="text-gray-600 italic mb-4">This lesson has been completed.</p>` : '';
+            const bodyHtml = `${videoHtml}${completedNote}${contentHtml}`;
 
             content.innerHTML = `
               <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
@@ -246,7 +337,7 @@ const { courseId, itemId } = Astro.params;
               </div>
             `;
 
-            const hasAnyVideo = useSections ? sections.some((s) => s.video?.trim()) : !!lesson.video?.trim();
+            const hasAnyVideo = !!lesson.video?.trim();
             if (hasAnyVideo && content) {
               const script = document.createElement('script');
               script.src = 'https://lopezinsurance.h5p.com/js/h5p-resizer.js';
@@ -309,6 +400,49 @@ const { courseId, itemId } = Astro.params;
       }
     }
 
+    function normalizeOptionKey(k: string): string {
+      const s = String(k).trim().toLowerCase();
+      if (s === 'true' || s === 'false') return s;
+      return s;
+    }
+
+    function renderQuizReview(
+      quiz: QuizDetail,
+      answers: Record<string, string>,
+      questionResults: QuizQuestionResult[] | undefined
+    ): string {
+      const resultsByQ = new Map(questionResults?.map((r) => [r.question_id, r]) ?? []);
+      return quiz.questions
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((q) => {
+          const result = resultsByQ.get(q.id);
+          const userAnswer = answers[String(q.id)];
+          const opts = Object.entries(q.options || {}).map(([k, v]) => {
+            const keyNorm = normalizeOptionKey(k);
+            const isUser = userAnswer != null && keyNorm === normalizeOptionKey(userAnswer);
+            const isCorrect = result != null && keyNorm === normalizeOptionKey(result.correct_answer);
+            let wrapClass = 'flex items-center gap-2 rounded-lg px-3 py-2';
+            if (isCorrect && isUser) wrapClass += ' bg-green-100 border border-green-500 text-green-800';
+            else if (isUser && result && !result.correct) wrapClass += ' bg-red-100 border border-red-500 text-red-800';
+            else if (isCorrect && !isUser) wrapClass += ' bg-green-50 border border-green-300 text-green-700';
+            else wrapClass += ' text-gray-700';
+            const label = isCorrect && !isUser ? `${escapeHtml(v)} (Correct answer)` : escapeHtml(v);
+            return `<div class="${wrapClass}">${label}</div>`;
+          }).join('');
+          const status = result?.correct ? '<span class="text-green-600 font-medium">✓ Correct</span>' : '<span class="text-red-600 font-medium">✗ Incorrect</span>';
+          return `
+            <div class="mb-6 p-4 border rounded-lg ${result?.correct ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50'}">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <p class="font-medium text-[#2B2B2B]">${escapeHtml(q.body)}</p>
+                ${result != null ? status : ''}
+              </div>
+              <div class="flex flex-col gap-2">${opts}</div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
     function renderQuiz(
       quiz: QuizDetail,
       courseItemId: number,
@@ -360,6 +494,15 @@ const { courseId, itemId } = Astro.params;
       `;
 
       if (isCompleted) {
+        const hasReview = quiz.question_results != null && quiz.question_results.length > 0;
+        const answersFromResults = hasReview
+          ? Object.fromEntries(
+              quiz.question_results!.map((r) => [String(r.question_id), r.user_answer ?? ''])
+            )
+          : {};
+        const bodyContent = hasReview
+          ? `<p class="text-gray-600 mb-6">This quiz has already been completed. Review your answers below.</p><div class="space-y-1">${renderQuizReview(quiz, answersFromResults, quiz.question_results)}</div>`
+          : `<p class="text-gray-600 mb-6">This quiz has already been completed. You can review the questions.</p>${questionsHtml}`;
         contentEl.innerHTML = `
           <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div class="p-6 border-b border-gray-200">
@@ -372,8 +515,7 @@ const { courseId, itemId } = Astro.params;
               </div>
             </div>
             <div class="p-6">
-              <p class="text-gray-600 mb-6">This quiz has already been completed. You can review the questions.</p>
-              ${questionsHtml}
+              ${bodyContent}
               ${navButtons}
             </div>
           </div>
@@ -395,7 +537,7 @@ const { courseId, itemId } = Astro.params;
                   Previous
                 </a>
               ` : '<div></div>'}
-              <button type="submit" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium">Submit answers</button>
+              <button type="submit" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium cursor-pointer">Submit answers</button>
             </div>
           </form>
         </div>
@@ -418,12 +560,18 @@ const { courseId, itemId } = Astro.params;
           const res = await post<QuizSubmitResponse>(`/quizzes/${quiz.id}/submit`, { answers });
           if (contentEl) {
             const nextNav = res.next_item ? `<a href="/curso/${courseId}/item/${res.next_item.id}" class="text-[#2F7FBF] hover:underline">Continue</a>` : '';
+            const reviewHtml = res.question_results?.length
+              ? `<div class="mt-8 pt-6 border-t border-gray-200"><h3 class="text-lg font-semibold text-[#2B2B2B] mb-4">Review your answers</h3>${renderQuizReview(quiz, answers, res.question_results)}</div>`
+              : '';
             contentEl.innerHTML = `
               <div class="bg-white rounded-xl p-8">
                 <h2 class="text-xl font-bold text-[#2B2B2B] mb-2">Result: ${res.score}%</h2>
                 <p class="text-gray-600 mb-4">${escapeHtml(res.message)}</p>
-                ${res.passed ? '<p class="text-green-600 font-medium mb-6">Passed!</p>' : '<p class="text-amber-600 font-medium mb-6">You can try again.</p>'}
-                ${res.course_complete ? `<a href="/curso/${courseId}" class="text-[#2F7FBF] hover:underline">Back to course</a>` : nextNav || '<button type="button" id="quiz-continue" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E]">Continue</button>'}
+                ${res.passed ? '<p class="text-green-600 font-medium mb-2">Passed!</p>' : '<p class="text-amber-600 font-medium mb-2">You can try again.</p>'}
+                ${reviewHtml}
+                <div class="mt-6 pt-4">
+                  ${res.course_complete ? `<a href="/curso/${courseId}" class="text-[#2F7FBF] hover:underline">Back to course</a>` : nextNav || '<button type="button" id="quiz-continue" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] cursor-pointer">Continue</button>'}
+                </div>
               </div>
             `;
             if (res.course_complete) {

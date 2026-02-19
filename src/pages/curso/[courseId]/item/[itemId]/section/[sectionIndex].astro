@@ -1,0 +1,379 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+export const prerender = false;
+const { courseId, itemId, sectionIndex } = Astro.params;
+---
+<BaseLayout title="Curso - AprendePlus" showFooter={false}>
+  <div id="curso-section-root" class="min-h-screen bg-[#F8F7F4] flex" data-course-id={courseId ?? ''} data-item-id={itemId ?? ''} data-section-index={sectionIndex ?? ''}>
+    <aside id="course-outline-sidebar" class="w-72 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen sticky top-0 overflow-y-auto">
+      <div class="p-4 border-b border-gray-200">
+        <a href={courseId ? `/curso/${courseId}` : '#'} class="inline-flex items-center gap-2 text-[#2F7FBF] hover:text-[#256A9E] text-sm mb-3 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to course
+        </a>
+        <h2 id="sidebar-course-title" class="font-semibold text-[#2B2B2B] text-sm">Loading...</h2>
+      </div>
+      <nav id="sidebar-outline" class="p-3 space-y-1 text-sm">
+        <p class="text-gray-500 py-2">Loading outline...</p>
+      </nav>
+    </aside>
+    <main class="flex-1 p-6 lg:p-8 overflow-auto">
+      <div id="section-content" class="max-w-4xl mx-auto">
+        <p class="text-gray-500">Loading...</p>
+      </div>
+      <div id="section-error" class="hidden max-w-4xl mx-auto mt-6 text-red-600"></div>
+    </main>
+  </div>
+
+  <script>
+    import { get, post } from '@/lib/api';
+    import type {
+      CourseDetail,
+      CourseItemRef,
+      LessonItem,
+      LessonSection,
+      CompleteLessonSectionResponse,
+    } from '@/lib/api-types';
+
+    const root = document.getElementById('curso-section-root');
+    const courseId = root?.getAttribute('data-course-id') ?? '';
+    const itemIdStr = root?.getAttribute('data-item-id') ?? '';
+    const sectionIndexStr = root?.getAttribute('data-section-index') ?? '';
+    const itemId = itemIdStr ? parseInt(itemIdStr, 10) : null;
+    const sectionIndex = sectionIndexStr !== '' ? parseInt(sectionIndexStr, 10) : 0;
+
+    function escapeHtml(s: string): string {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function showError(msg: string) {
+      const content = document.getElementById('section-content');
+      const errEl = document.getElementById('section-error');
+      if (content) content.innerHTML = '';
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    function renderSidebarWithSections(
+      course: CourseDetail,
+      currentItemId: number | null,
+      currentSectionIndex: number | null
+    ) {
+      const titleEl = document.getElementById('sidebar-course-title');
+      const outlineEl = document.getElementById('sidebar-outline');
+      if (titleEl) titleEl.textContent = course.title ?? 'Course';
+      if (!outlineEl || !course.course_items?.length) {
+        if (outlineEl) outlineEl.innerHTML = '<p class="text-gray-500 py-2">No items in this course.</p>';
+        return;
+      }
+      const nextId = course.next_item?.id ?? null;
+      const lessonsOnly = course.course_items.filter((ci) => ci.item_type === 'Lesson');
+      let globalIdx = 0;
+      const parts: string[] = [];
+      for (let i = 0; i < course.course_items.length; i++) {
+        const item = course.course_items[i];
+        const isQuiz = item.item_type === 'Quiz';
+        const isLessonWithSections = !isQuiz && (item.lesson_sections?.length ?? 0) > 0;
+        const completedSectionIds = (item as CourseItemRef).completed_section_ids ?? [];
+        const isCurrentItem = item.id === currentItemId;
+
+        if (isQuiz) {
+          globalIdx++;
+          const isCompleted = item.completed;
+          const isNext = item.id === nextId;
+          const isLocked = !isCompleted && !isNext;
+          const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
+          const linkClass = isCurrentItem && currentSectionIndex === null
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+            : isLocked
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+          const icon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>';
+          const badge = isCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${globalIdx}</span>`;
+          const tag = isLocked ? 'div' : 'a';
+          const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
+          parts.push(`<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`);
+        } else if (isLessonWithSections) {
+          const sections = (item.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+          const lessonNum = lessonsOnly.findIndex((ci) => ci.id === item.id) + 1;
+          const parentCompleted = item.completed;
+          const parentIsNext = item.id === nextId;
+          const parentLocked = !parentCompleted && !parentIsNext;
+          const parentHref = parentLocked ? '#' : `/curso/${courseId}/item/${item.id}/section/0`;
+          const expandedByDefault = isCurrentItem && currentSectionIndex !== null;
+          const parentLinkClass = parentLocked
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed flex-1 min-w-0'
+            : isCurrentItem
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer flex-1 min-w-0'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer flex-1 min-w-0';
+          const parentBadge = parentCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${lessonNum}</span>`;
+          const bookIcon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const chevronSvg = expandedByDefault ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>';
+          const chevronBtn = `<button type="button" class="sidebar-chevron-toggle flex-shrink-0 p-1 rounded hover:bg-gray-100 cursor-pointer" aria-label="${expandedByDefault ? 'Collapse sections' : 'Expand sections'}"><svg class="w-4 h-4 text-[#2B2B2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">${chevronSvg}</svg></button>`;
+          const parentTag = parentLocked ? 'div' : 'a';
+          const parentAttrs = parentLocked ? '' : ` href="${escapeHtml(parentHref)}"`;
+          parts.push(`<div class="sidebar-lesson-sections" data-lesson-item-id="${item.id}" data-expanded="${expandedByDefault}"><div class="flex items-center gap-1 rounded-lg ${isCurrentItem ? 'bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF]' : ''}"><${parentTag} class="${parentLinkClass}"${parentAttrs}>${bookIcon}<span class="flex-shrink-0 w-5 h-5 flex items-center justify-center">${parentBadge}</span><span class="truncate">${escapeHtml(item.title)}</span></${parentTag}>${chevronBtn}</div><div class="sidebar-section-rows" style="${expandedByDefault ? '' : 'display:none'}">`);
+          for (let s = 0; s < sections.length; s++) {
+            const sec = sections[s];
+            const secCompleted = completedSectionIds.includes(sec.id);
+            const prevSectionsComplete = s === 0 || sections.slice(0, s).every((prev) => completedSectionIds.includes(prev.id));
+            const isLocked = parentLocked || !secCompleted && !prevSectionsComplete;
+            const secHref = isLocked ? '#' : `/curso/${courseId}/item/${item.id}/section/${s}`;
+            const isCurrent = isCurrentItem && currentSectionIndex === s;
+            const secLinkClass = isCurrent
+              ? 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+              : isLocked
+                ? 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+                : 'flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+            const secBadge = secCompleted
+              ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+              : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${lessonNum}.${s + 1}</span>`;
+            const secTag = isLocked ? 'div' : 'a';
+            const secAttrs = isLocked ? '' : ` href="${escapeHtml(secHref)}"`;
+            parts.push(`<${secTag} class="${secLinkClass}"${secAttrs}>${secBadge}<span class="truncate">${escapeHtml(sec.title)}</span></${secTag}>`);
+          }
+          parts.push('</div></div>');
+          globalIdx++;
+        } else {
+          globalIdx++;
+          const isCompleted = item.completed;
+          const isNext = item.id === nextId;
+          const isLocked = !isCompleted && !isNext;
+          const href = isLocked ? '#' : `/curso/${courseId}/item/${item.id}`;
+          const linkClass = isCurrentItem && currentSectionIndex === null
+            ? 'flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2F7FBF]/15 border-l-2 border-[#2F7FBF] text-[#2F7FBF] font-medium cursor-pointer'
+            : isLocked
+              ? 'flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed'
+              : 'flex items-center gap-3 px-3 py-2 rounded-lg text-[#2B2B2B] hover:bg-gray-100 cursor-pointer';
+          const icon = '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+          const badge = isCompleted
+            ? '<span class="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>'
+            : `<span class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-medium">${globalIdx}</span>`;
+          const tag = isLocked ? 'div' : 'a';
+          const attrs = isLocked ? '' : ` href="${escapeHtml(href)}"`;
+          parts.push(`<${tag} class="${linkClass}"${attrs}>${icon}${badge}<span class="truncate">${escapeHtml(item.title)}</span></${tag}>`);
+        }
+      }
+      outlineEl.innerHTML = parts.join('');
+      outlineEl.querySelectorAll('.sidebar-chevron-toggle').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const wrapper = (e.currentTarget as HTMLElement).closest('.sidebar-lesson-sections');
+          if (!wrapper) return;
+          const sectionRows = wrapper.querySelector('.sidebar-section-rows') as HTMLElement;
+          const isExpanded = wrapper.getAttribute('data-expanded') === 'true';
+          wrapper.setAttribute('data-expanded', String(!isExpanded));
+          if (sectionRows) sectionRows.style.display = isExpanded ? 'none' : '';
+          const target = e.currentTarget as HTMLElement;
+          const svg = target.querySelector('svg');
+          if (svg) {
+            svg.innerHTML = isExpanded
+              ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>'
+              : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>';
+          }
+          target.setAttribute('aria-label', isExpanded ? 'Expand sections' : 'Collapse sections');
+        });
+      });
+    }
+
+    function getPrevLink(course: CourseDetail, itemId: number, sectionIndex: number): string {
+      const items = course.course_items ?? [];
+      const idx = items.findIndex((ci) => ci.id === itemId);
+      if (idx < 0) return `/curso/${courseId}`;
+      const item = items[idx];
+      const sections = (item.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      if (sectionIndex > 0) {
+        return `/curso/${courseId}/item/${itemId}/section/${sectionIndex - 1}`;
+      }
+      if (idx === 0) return `/curso/${courseId}`;
+      const prev = items[idx - 1];
+      if (prev.item_type === 'Lesson' && (prev.lesson_sections?.length ?? 0) > 0) {
+        const prevSections = (prev.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        return `/curso/${courseId}/item/${prev.id}/section/${prevSections.length - 1}`;
+      }
+      return `/curso/${courseId}/item/${prev.id}`;
+    }
+
+    function getNextLink(course: CourseDetail, itemId: number, sectionIndex: number): string {
+      const items = course.course_items ?? [];
+      const idx = items.findIndex((ci) => ci.id === itemId);
+      if (idx < 0) return `/curso/${courseId}`;
+      const item = items[idx];
+      const sections = (item.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      if (sectionIndex < sections.length - 1) {
+        return `/curso/${courseId}/item/${itemId}/section/${sectionIndex + 1}`;
+      }
+      if (idx >= items.length - 1) return `/curso/${courseId}`;
+      const next = items[idx + 1];
+      if (next.item_type === 'Lesson' && (next.lesson_sections?.length ?? 0) > 0) {
+        return `/curso/${courseId}/item/${next.id}/section/0`;
+      }
+      return `/curso/${courseId}/item/${next.id}`;
+    }
+
+    async function loadSection() {
+      const content = document.getElementById('section-content');
+      const errorEl = document.getElementById('section-error');
+      if (errorEl) errorEl.classList.add('hidden');
+
+      if (!courseId || itemId == null || sectionIndex < 0) {
+        showError('Invalid parameters');
+        return;
+      }
+
+      try {
+        const course = await get<CourseDetail>(`/courses/${courseId}`);
+        const courseItem = course.course_items?.find((c) => c.id === itemId);
+        if (!courseItem || courseItem.item_type !== 'Lesson') {
+          window.location.replace(`/curso/${courseId}/item/${itemId}`);
+          return;
+        }
+        const completedSectionIds = courseItem.completed_section_ids ?? [];
+        let lesson: LessonItem;
+        try {
+          const lessonData = await get<LessonItem>(`/courses/${courseId}/lessons/${courseItem.item_id}`);
+          lesson = { ...lessonData, lesson_sections: lessonData.lesson_sections ?? courseItem.lesson_sections ?? [] };
+        } catch {
+          lesson = {
+            id: courseItem.item_id,
+            title: courseItem.title,
+            content: courseItem.content ?? '',
+            video: courseItem.video,
+            lesson_sections: courseItem.lesson_sections ?? [],
+          };
+        }
+        const sections = (lesson.lesson_sections ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        if (sections.length === 0) {
+          window.location.replace(`/curso/${courseId}/item/${itemId}`);
+          return;
+        }
+        if (sectionIndex >= sections.length) {
+          window.location.replace(`/curso/${courseId}/item/${itemId}/section/${sections.length - 1}`);
+          return;
+        }
+        const section = sections[sectionIndex];
+        const prevSectionsComplete = sectionIndex === 0 || sections.slice(0, sectionIndex).every((s) => completedSectionIds.includes(s.id));
+        if (!prevSectionsComplete) {
+          const firstIncomplete = sections.findIndex((s) => !completedSectionIds.includes(s.id));
+          window.location.replace(`/curso/${courseId}/item/${itemId}/section/${firstIncomplete >= 0 ? firstIncomplete : 0}`);
+          return;
+        }
+        const isSectionCompleted = completedSectionIds.includes(section.id);
+        const lessonsOnly = (course.course_items ?? []).filter((ci) => ci.item_type === 'Lesson');
+        const lessonNum = lessonsOnly.findIndex((ci) => ci.id === itemId) + 1;
+        const sectionNum = `${lessonNum}.${sectionIndex + 1}`;
+
+        renderSidebarWithSections(course, itemId, sectionIndex);
+
+        const completedBadgeHtml = `
+          <span class="flex items-center gap-2 text-green-600 font-medium">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Completed
+          </span>
+        `;
+        const prevHref = getPrevLink(course, itemId, sectionIndex);
+        const nextHref = getNextLink(course, itemId, sectionIndex);
+        const navButtons = `
+          <div id="lesson-nav" class="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between gap-4">
+            <a href="${escapeHtml(prevHref)}" class="flex items-center gap-2 bg-[#2F7FBF] text-white px-4 py-2 rounded-lg hover:bg-[#256A9E] font-medium transition-colors cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              Back
+            </a>
+            ${isSectionCompleted ? completedBadgeHtml : `
+              <button type="button" id="complete-section-btn" class="bg-[#2F7FBF] text-white px-6 py-3 rounded-lg hover:bg-[#256A9E] font-medium cursor-pointer">
+                Mark as complete
+              </button>
+            `}
+            <a href="${escapeHtml(nextHref)}" id="lesson-next-link" class="flex items-center gap-2 ${isSectionCompleted ? 'bg-[#2F7FBF] text-white hover:bg-[#256A9E] cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'} px-4 py-2 rounded-lg font-medium transition-colors">
+              Next
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        `;
+
+        function sectionVideoHtml(url: string | undefined, label: string): string {
+          if (!url?.trim()) return '';
+          return `<div class="mb-4 w-full max-w-4xl mx-auto"><iframe src="${escapeHtml(url.trim())}" aria-label="${escapeHtml(label)}" width="100%" height="400" class="w-full rounded-lg" style="max-width: 1088px; aspect-ratio: 1088/637;" frameborder="0" allowfullscreen="allowfullscreen" allow="autoplay *; geolocation *; microphone *; camera *; midi *; encrypted-media *"></iframe></div>`;
+        }
+        const secVideo = sectionVideoHtml(section.video, section.title);
+        const secContent = section.content?.trim() ? `<div class="prose prose-[#2B2B2B] max-w-none whitespace-pre-line text-gray-700 mt-4">${escapeHtml(section.content)}</div>` : '';
+
+        if (content) {
+          content.innerHTML = `
+            <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
+              <div class="p-6 lg:p-8">
+                <h2 class="text-2xl font-bold text-[#2B2B2B] mb-2">${escapeHtml(lesson.title)}</h2>
+                <h3 class="text-xl font-semibold text-[#2B2B2B] mb-4">${escapeHtml(sectionNum)} ${escapeHtml(section.title)}</h3>
+                ${secVideo}
+                ${secContent}
+                ${navButtons}
+              </div>
+            </div>
+          `;
+
+          if (section.video?.trim() && content) {
+            const script = document.createElement('script');
+            script.src = 'https://lopezinsurance.h5p.com/js/h5p-resizer.js';
+            script.charset = 'UTF-8';
+            content.appendChild(script);
+          }
+
+          if (!isSectionCompleted) {
+            document.getElementById('complete-section-btn')?.addEventListener('click', async () => {
+              const btn = document.getElementById('complete-section-btn') as HTMLButtonElement;
+              if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+              }
+              try {
+                const res = await post<CompleteLessonSectionResponse>(`/courses/${courseId}/complete_lesson_section`, {
+                  course_item_id: itemId,
+                  lesson_section_id: section.id,
+                });
+                const nextLink = content?.querySelector('#lesson-next-link') as HTMLAnchorElement;
+                if (nextLink) {
+                  nextLink.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+                  nextLink.classList.add('bg-[#2F7FBF]', 'text-white', 'hover:bg-[#256A9E]', 'cursor-pointer');
+                }
+                btn.outerHTML = completedBadgeHtml;
+                const updatedCourse = await get<CourseDetail>(`/courses/${courseId}`);
+                renderSidebarWithSections(updatedCourse, itemId, sectionIndex);
+                if (res.course_complete && res.next_item == null) {
+                  window.location.href = `/curso/${courseId}`;
+                  return;
+                }
+              } catch (e: unknown) {
+                const err = e as { body?: { error?: string; errors?: string[] } };
+                const msg = err?.body?.error || (Array.isArray(err?.body?.errors) && err.body.errors[0]) || 'Error';
+                showError(msg);
+                if (btn) {
+                  btn.disabled = false;
+                  btn.textContent = 'Mark as complete';
+                }
+              }
+            });
+          }
+        }
+      } catch (e: unknown) {
+        const err = e as { status?: number; body?: { error?: string } };
+        if (err.status === 404) {
+          window.location.replace(`/curso/${courseId}`);
+          return;
+        }
+        showError(err?.body?.error || 'Error loading');
+      }
+    }
+
+    if (courseId && itemIdStr) loadSection();
+  </script>
+</BaseLayout>

@@ -45,6 +45,15 @@ const { courseId } = Astro.params;
       return div.innerHTML;
     }
 
+    // Google Drive "uc?export=view" URLs often don't work in <img>. Use thumbnail endpoint when we can extract the file id.
+    function imageSrcForHeaderUrl(url: string | null | undefined): string | null {
+      if (!url) return null;
+      const decoded = url.replace(/&amp;/g, '&');
+      const m = decoded.match(/[?&]id=([^&]+)/);
+      if (m) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w600`;
+      return decoded;
+    }
+
     async function load() {
       const hero = document.getElementById('course-hero');
       const actions = document.getElementById('course-actions');
@@ -54,7 +63,12 @@ const { courseId } = Astro.params;
       try {
         const course = await get<CourseDetail>(`/courses/${courseId}`);
         if (hero) {
+          const headerImgSrc = imageSrcForHeaderUrl(course.header_image_url);
+          const headerImg = headerImgSrc
+            ? `<img src="${escapeHtml(headerImgSrc)}" alt="" class="w-full h-48 object-cover rounded-lg mb-6" referrerpolicy="no-referrer" />`
+            : '';
           hero.innerHTML = `
+            ${headerImg}
             <h1 class="text-4xl font-bold mb-4">${escapeHtml(course.title)}</h1>
             <p class="text-gray-300 text-lg leading-relaxed">${escapeHtml(course.description || '')}</p>
           `;

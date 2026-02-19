@@ -18,8 +18,17 @@ export const prerender = false;
         </div>
       </div>
 
-      <div class="mb-6">
+      <div class="mb-6 flex flex-col sm:flex-row gap-4 sm:items-center">
         <input type="text" id="admin-search" placeholder="Search courses..." class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent" />
+        <div class="flex items-center gap-2">
+          <label for="admin-sort" class="text-sm font-medium text-[#2B2B2B] whitespace-nowrap">Order by</label>
+          <select id="admin-sort" class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F7FBF] focus:border-transparent bg-white min-w-[180px]">
+            <option value="newest-first">Newest first</option>
+            <option value="oldest-first">Oldest first</option>
+            <option value="name-az">Name A–Z</option>
+            <option value="name-za">Name Z–A</option>
+          </select>
+        </div>
       </div>
 
       <div id="admin-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 rounded-lg"></div>
@@ -58,8 +67,11 @@ export const prerender = false;
 
   const tbody = document.getElementById('admin-tbody');
   const searchEl = document.getElementById('admin-search') as HTMLInputElement;
+  const sortEl = document.getElementById('admin-sort') as HTMLSelectElement;
   const totalEl = document.getElementById('admin-total');
   const errorEl = document.getElementById('admin-error');
+
+  let allCourses: AdminCourse[] = [];
 
   function showError(msg: string) {
     if (errorEl) {
@@ -74,14 +86,50 @@ export const prerender = false;
     return div.innerHTML;
   }
 
+  function imageSrcForHeaderUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    const decoded = url.replace(/&amp;/g, '&');
+    const m = decoded.match(/[?&]id=([^&]+)/);
+    if (m) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w200`;
+    return decoded;
+  }
+
+  function sortCourses(courses: AdminCourse[]): AdminCourse[] {
+    const arr = [...courses];
+    const by = sortEl?.value ?? 'newest-first';
+    if (by === 'newest-first') arr.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    else if (by === 'oldest-first') arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+    else if (by === 'name-az') arr.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+    else if (by === 'name-za') arr.sort((a, b) => (b.title || '').localeCompare(a.title || '', undefined, { sensitivity: 'base' }));
+    return arr;
+  }
+
+  function applySortAndFilter() {
+    const q = (searchEl?.value ?? '').toLowerCase().trim();
+    const sorted = sortCourses(allCourses);
+    const filtered = q
+      ? sorted.filter((c) => (c.title || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q))
+      : sorted;
+    render(filtered);
+    if (totalEl) totalEl.textContent = String(filtered.length);
+  }
+
   function render(courses: AdminCourse[]) {
     if (!tbody) return;
     tbody.innerHTML = courses
       .map(
-        (c) => `
+        (c) => {
+          const imgSrc = imageSrcForHeaderUrl((c as { header_image_url?: string | null }).header_image_url);
+          const thumb = imgSrc
+            ? `<img src="${escapeHtml(imgSrc)}" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0" referrerpolicy="no-referrer" />`
+            : '<div class="w-12 h-12 rounded bg-[#EEEEEE] flex items-center justify-center flex-shrink-0 text-lg text-gray-400">📚</div>';
+          return `
       <tr class="admin-course-row hover:bg-[#FFF0CE]/30 transition-colors" data-title="${escapeHtml((c.title || '').toLowerCase())}" data-description="${escapeHtml((c.description || '').toLowerCase())}">
         <td class="px-6 py-4">
-          <p class="font-medium text-[#2B2B2B]">${escapeHtml(c.title)}</p>
+          <div class="flex items-center gap-3">
+            ${thumb}
+            <p class="font-medium text-[#2B2B2B]">${escapeHtml(c.title)}</p>
+          </div>
         </td>
         <td class="px-6 py-4 text-sm text-gray-600 max-w-[280px]" title="${escapeHtml(c.description || '')}"><div class="line-clamp-2 overflow-hidden" style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; word-break: normal;">${escapeHtml(c.description || '')}</div></td>
         <td class="px-6 py-4 text-center text-sm text-gray-700">${c.lessons_count != null ? c.lessons_count : '—'}</td>
@@ -97,11 +145,10 @@ export const prerender = false;
           </div>
         </td>
       </tr>
-    `
+    `;
+        }
       )
       .join('');
-
-    if (totalEl) totalEl.textContent = String(courses.length);
 
     tbody.querySelectorAll('.admin-delete').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -122,7 +169,8 @@ export const prerender = false;
     if (errorEl) errorEl.classList.add('hidden');
     try {
       const data = (await get<AdminCourse[]>('/admin/courses')) ?? [];
-      render(data);
+      allCourses = data;
+      applySortAndFilter();
     } catch (e: unknown) {
       const err = e as { status?: number; body?: { error?: string } };
       if (err.status === 403) {
@@ -134,14 +182,8 @@ export const prerender = false;
     }
   }
 
-  searchEl?.addEventListener('input', () => {
-    const q = (searchEl.value ?? '').toLowerCase();
-    document.querySelectorAll('.admin-course-row').forEach((row: Element) => {
-      const el = row as HTMLElement;
-      const match = !q || (el.dataset.title ?? '').includes(q) || (el.dataset.description ?? '').includes(q);
-      el.style.display = match ? '' : 'none';
-    });
-  });
+  searchEl?.addEventListener('input', applySortAndFilter);
+  sortEl?.addEventListener('change', applySortAndFilter);
 
   load();
 </script>
